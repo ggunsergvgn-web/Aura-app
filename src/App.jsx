@@ -1,4 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const supabase = createClient(
+  "https://hebljdvucansszxhvnfp.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlYmxqZHZ1Y2Fuc3N6eGh2bmZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTQ1MTQsImV4cCI6MjA4ODY3MDUxNH0.nS3J8Z7bNano_z7jdFmIhtmYrOc6HC2FpmBPrtcPZhI"
+);
 
 const CONTACTS = [
   { id: 1, name: "Ayşe Kaya", avatar: "AK", color: "#FF6B6B", lastMsg: "Yarın görüşelim mi?", time: "14:32", unread: 3, online: true, story: true },
@@ -15,18 +21,9 @@ const POSTS = [
 ];
 
 const STORIES = CONTACTS.filter(c => c.story);
-
 const INITIAL_MESSAGES = {
-  1: [
-    { id: 1, text: "Merhaba! Nasılsın? 😊", from: "them", time: "14:20" },
-    { id: 2, text: "İyiyim teşekkürler! Sen?", from: "me", time: "14:21" },
-    { id: 3, text: "Yarın görüşelim mi?", from: "them", time: "14:32" },
-  ],
-  2: [
-    { id: 1, text: "Fotoğrafları paylaştın mı?", from: "them", time: "13:10" },
-    { id: 2, text: "Evet az önce attım!", from: "me", time: "13:12" },
-    { id: 3, text: "Fotoğrafları gördüm 🔥", from: "them", time: "13:15" },
-  ],
+  1: [{ id: 1, text: "Merhaba! Nasılsın? 😊", from: "them", time: "14:20" }, { id: 2, text: "İyiyim teşekkürler! Sen?", from: "me", time: "14:21" }, { id: 3, text: "Yarın görüşelim mi?", from: "them", time: "14:32" }],
+  2: [{ id: 1, text: "Fotoğrafları paylaştın mı?", from: "them", time: "13:10" }, { id: 2, text: "Evet az önce attım!", from: "me", time: "13:12" }, { id: 3, text: "Fotoğrafları gördüm 🔥", from: "them", time: "13:15" }],
 };
 
 function Avatar({ contact, size = 42 }) {
@@ -38,20 +35,72 @@ function Avatar({ contact, size = 42 }) {
   );
 }
 
+function AuthScreen({ onAuth }) {
+  const [mode, setMode] = useState("login");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const handle = async () => {
+    setLoading(true); setError(""); setSuccess("");
+    try {
+      if (mode === "login") {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        onAuth(data.user);
+      } else {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        setSuccess("Kayıt başarılı! E-postanı kontrol et ve doğrula.");
+      }
+    } catch (e) {
+      setError(e.message);
+    }
+    setLoading(false);
+  };
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 30px" }}>
+      <div style={{ fontSize: 48, marginBottom: 8 }}>✨</div>
+      <div style={{ color: "#fff", fontSize: 32, fontWeight: 700, marginBottom: 4 }}>Aura</div>
+      <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, marginBottom: 40 }}>Sosyal platformun</div>
+
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 12 }}>
+        <input value={email} onChange={e => setEmail(e.target.value)} placeholder="E-posta" type="email"
+          style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: "14px 18px", color: "#fff", fontSize: 15, outline: "none", fontFamily: "inherit" }} />
+        <input value={password} onChange={e => setPassword(e.target.value)} placeholder="Şifre" type="password"
+          style={{ background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, padding: "14px 18px", color: "#fff", fontSize: 15, outline: "none", fontFamily: "inherit" }} />
+
+        {error && <div style={{ color: "#FF6B6B", fontSize: 13, textAlign: "center" }}>{error}</div>}
+        {success && <div style={{ color: "#22C55E", fontSize: 13, textAlign: "center" }}>{success}</div>}
+
+        <button onClick={handle} disabled={loading}
+          style={{ background: "linear-gradient(135deg, #7C3AED, #EC4899)", border: "none", borderRadius: 16, padding: "16px", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer", marginTop: 8, fontFamily: "inherit" }}>
+          {loading ? "⏳" : mode === "login" ? "Giriş Yap" : "Kayıt Ol"}
+        </button>
+
+        <button onClick={() => setMode(mode === "login" ? "register" : "login")}
+          style={{ background: "none", border: "none", color: "rgba(255,255,255,0.5)", fontSize: 14, cursor: "pointer", fontFamily: "inherit" }}>
+          {mode === "login" ? "Hesabın yok mu? Kayıt ol" : "Zaten hesabın var mı? Giriş yap"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ChatScreen({ contacts, messages, setMessages }) {
   const [selectedContact, setSelectedContact] = useState(null);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef(null);
-
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, selectedContact]);
-
   const sendMessage = () => {
     if (!input.trim() || !selectedContact) return;
     const newMsg = { id: Date.now(), text: input.trim(), from: "me", time: new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) };
     setMessages(prev => ({ ...prev, [selectedContact.id]: [...(prev[selectedContact.id] || []), newMsg] }));
     setInput("");
   };
-
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       {selectedContact ? (
@@ -129,11 +178,7 @@ function ChatScreen({ contacts, messages, setMessages }) {
 
 function FeedScreen() {
   const [posts, setPosts] = useState(POSTS);
-
-  const toggleLike = (id) => {
-    setPosts(prev => prev.map(p => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p));
-  };
-
+  const toggleLike = (id) => { setPosts(prev => prev.map(p => p.id === id ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 } : p)); };
   return (
     <div style={{ flex: 1, overflowY: "auto" }}>
       {posts.map(post => (
@@ -144,11 +189,7 @@ function FeedScreen() {
                 <div style={{ width: 30, height: 30, borderRadius: "50%", background: `linear-gradient(135deg, ${post.color}, ${post.color}99)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>{post.avatar}</div>
               </div>
             </div>
-            <div>
-              <div style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>{post.user}</div>
-              <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>{post.time}</div>
-            </div>
-            <button style={{ marginLeft: "auto", background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)" }}>•••</button>
+            <div><div style={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>{post.user}</div><div style={{ color: "rgba(255,255,255,0.4)", fontSize: 11 }}>{post.time}</div></div>
           </div>
           <img src={post.image} alt="" style={{ width: "100%", aspectRatio: "1", objectFit: "cover" }} />
           <div style={{ padding: "12px 16px" }}>
@@ -160,9 +201,6 @@ function FeedScreen() {
               <button style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
                 <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
                 <span style={{ color: "white", fontSize: 13 }}>{post.comments}</span>
-              </button>
-              <button style={{ background: "none", border: "none", cursor: "pointer", marginLeft: "auto" }}>
-                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
               </button>
             </div>
             <div style={{ color: "#fff", fontSize: 13 }}><span style={{ fontWeight: 600 }}>{post.user}</span> {post.caption}</div>
@@ -178,9 +216,7 @@ function CallsScreen() {
     { id: 1, contact: CONTACTS[0], type: "incoming", time: "Bugün 14:20", duration: "5 dk" },
     { id: 2, contact: CONTACTS[1], type: "outgoing", time: "Bugün 11:05", duration: "12 dk" },
     { id: 3, contact: CONTACTS[2], type: "missed", time: "Dün 18:30", duration: "" },
-    { id: 4, contact: CONTACTS[3], type: "incoming", time: "Dün 10:15", duration: "3 dk" },
   ];
-
   return (
     <div style={{ flex: 1, overflowY: "auto" }}>
       {calls.map(call => (
@@ -188,12 +224,7 @@ function CallsScreen() {
           <Avatar contact={call.contact} size={48} />
           <div style={{ flex: 1 }}>
             <div style={{ color: "#fff", fontWeight: 600, fontSize: 15 }}>{call.contact.name}</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
-              {call.type === "incoming" && <svg width="12" height="12" fill="#22C55E" viewBox="0 0 24 24"><path d="M20 5H4l8 8z"/></svg>}
-              {call.type === "outgoing" && <svg width="12" height="12" fill="#7C3AED" viewBox="0 0 24 24"><path d="M4 19h16L12 11z"/></svg>}
-              {call.type === "missed" && <svg width="12" height="12" fill="#EC4899" viewBox="0 0 24 24"><path d="M20 5H4l8 8z"/></svg>}
-              <span style={{ color: call.type === "missed" ? "#EC4899" : "rgba(255,255,255,0.4)", fontSize: 12 }}>{call.time} {call.duration && `· ${call.duration}`}</span>
-            </div>
+            <div style={{ color: call.type === "missed" ? "#EC4899" : "rgba(255,255,255,0.4)", fontSize: 12, marginTop: 3 }}>{call.time} {call.duration && `· ${call.duration}`}</div>
           </div>
           <button style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(255,255,255,0.07)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.99 1.17h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
@@ -204,26 +235,28 @@ function CallsScreen() {
   );
 }
 
-function ProfileScreen() {
+function ProfileScreen({ user, onLogout }) {
   return (
     <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", paddingBottom: 24, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
         <div style={{ width: 90, height: 90, borderRadius: "50%", background: "conic-gradient(#7C3AED, #EC4899, #FF6B6B, #7C3AED)", padding: 3, marginBottom: 14 }}>
           <div style={{ background: "#0F0F1A", borderRadius: "50%", padding: 3, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "linear-gradient(135deg, #7C3AED, #EC4899)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 700, color: "#fff" }}>GG</div>
+            <div style={{ width: "100%", height: "100%", borderRadius: "50%", background: "linear-gradient(135deg, #7C3AED, #EC4899)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 28, fontWeight: 700, color: "#fff" }}>
+              {user?.email?.[0]?.toUpperCase() || "U"}
+            </div>
           </div>
         </div>
-        <div style={{ color: "#fff", fontSize: 20, fontWeight: 700 }}>ggunsergvgn</div>
+        <div style={{ color: "#fff", fontSize: 18, fontWeight: 700 }}>{user?.email || "Kullanıcı"}</div>
         <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginTop: 4 }}>Aura kullanıcısı ✨</div>
         <div style={{ display: "flex", gap: 32, marginTop: 20 }}>
-          {[["12", "Gönderi"], ["248", "Takipçi"], ["183", "Takip"]].map(([num, label]) => (
+          {[["0", "Gönderi"], ["0", "Takipçi"], ["0", "Takip"]].map(([num, label]) => (
             <div key={label} style={{ textAlign: "center" }}>
               <div style={{ color: "#fff", fontSize: 18, fontWeight: 700 }}>{num}</div>
               <div style={{ color: "rgba(255,255,255,0.4)", fontSize: 12 }}>{label}</div>
             </div>
           ))}
         </div>
-        <button style={{ marginTop: 16, padding: "8px 32px", borderRadius: 20, background: "linear-gradient(135deg, #7C3AED, #EC4899)", border: "none", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: 14 }}>Profili Düzenle</button>
+        <button onClick={onLogout} style={{ marginTop: 16, padding: "8px 32px", borderRadius: 20, background: "rgba(255,255,255,0.08)", border: "none", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: 14 }}>Çıkış Yap</button>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 2, marginTop: 2 }}>
         {[1,2,3,4,5,6].map(i => (
@@ -237,6 +270,24 @@ function ProfileScreen() {
 export default function App() {
   const [activeTab, setActiveTab] = useState("chats");
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+  };
 
   const tabs = [
     { id: "chats", label: "Sohbet", icon: <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> },
@@ -245,31 +296,42 @@ export default function App() {
     { id: "profile", label: "Profil", icon: <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> },
   ];
 
+  if (loading) return (
+    <div style={{ fontFamily: "'Sora', sans-serif", background: "#0A0A14", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ color: "#fff", fontSize: 32 }}>✨</div>
+    </div>
+  );
+
   return (
     <div style={{ fontFamily: "'Sora', sans-serif", background: "#0A0A14", minHeight: "100vh", display: "flex", justifyContent: "center" }}>
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
       <div style={{ width: "100%", maxWidth: 430, height: "100vh", background: "#0F0F1A", display: "flex", flexDirection: "column", overflow: "hidden" }}>
         <div style={{ padding: "50px 24px 12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <div style={{ color: "#fff", fontSize: 24, fontWeight: 700 }}>Aura ✨</div>
-          <button style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg, #7C3AED, #EC4899)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {user && <button style={{ width: 38, height: 38, borderRadius: "50%", background: "linear-gradient(135deg, #7C3AED, #EC4899)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          </button>
+          </button>}
         </div>
 
-        {activeTab === "chats" && <ChatScreen contacts={CONTACTS} messages={messages} setMessages={setMessages} />}
-        {activeTab === "feed" && <FeedScreen />}
-        {activeTab === "calls" && <CallsScreen />}
-        {activeTab === "profile" && <ProfileScreen />}
-
-        <div style={{ padding: "12px 30px 40px", display: "flex", justifyContent: "space-around", background: "rgba(0,0,0,0.4)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-          {tabs.map(tab => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: activeTab === tab.id ? "#EC4899" : "rgba(255,255,255,0.35)" }}>
-              {tab.icon}
-              <span style={{ fontSize: 10, fontWeight: 500 }}>{tab.label}</span>
-              {activeTab === tab.id && <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#EC4899" }} />}
-            </button>
-          ))}
-        </div>
+        {!user ? (
+          <AuthScreen onAuth={setUser} />
+        ) : (
+          <>
+            {activeTab === "chats" && <ChatScreen contacts={CONTACTS} messages={messages} setMessages={setMessages} />}
+            {activeTab === "feed" && <FeedScreen />}
+            {activeTab === "calls" && <CallsScreen />}
+            {activeTab === "profile" && <ProfileScreen user={user} onLogout={handleLogout} />}
+            <div style={{ padding: "12px 30px 40px", display: "flex", justifyContent: "space-around", background: "rgba(0,0,0,0.4)", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+              {tabs.map(tab => (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4, color: activeTab === tab.id ? "#EC4899" : "rgba(255,255,255,0.35)" }}>
+                  {tab.icon}
+                  <span style={{ fontSize: 10, fontWeight: 500 }}>{tab.label}</span>
+                  {activeTab === tab.id && <div style={{ width: 4, height: 4, borderRadius: "50%", background: "#EC4899" }} />}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
