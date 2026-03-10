@@ -7,7 +7,7 @@ const supabase = createClient(
 );
 
 const CONTACTS = [
-  { id: 1, name: "Ayşe Kaya", avatar: "AK", color: "#9B59B6", lastMsg: "Yarın görüşelim mi?", time: "1h", unread: 3, online: true },
+  { id: 1, name: "GG", avatar: "AK", color: "#9B59B6", lastMsg: "Yarın görüşelim mi?", time: "1h", unread: 3, online: true },
   { id: 2, name: "Mert Demir", avatar: "MD", color: "#8E44AD", lastMsg: "Fotoğrafları gördüm 🔥", time: "2h", unread: 0, online: true },
   { id: 3, name: "Selin Yıldız", avatar: "SY", color: "#6C3483", lastMsg: "Harika bir gündü!", time: "3h", unread: 1, online: false },
   { id: 4, name: "Burak Arslan", avatar: "BA", color: "#7D3C98", lastMsg: "👍", time: "5h", unread: 0, online: false },
