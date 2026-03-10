@@ -429,7 +429,7 @@ function PostCard({ post, user, onDelete, onUpdate, onProfileClick }) {
       {showComments&&(
         <div style={{padding:"0 14px 14px",borderTop:"1px solid rgba(99,102,241,0.07)"}}>
           {comments.length===0&&<div style={{textAlign:"center",color:"rgba(148,163,184,0.3)",fontSize:12,padding:"12px 0"}}>İlk yorumu yap!</div>}
-          {comments.length===0&&<div style={{textAlign:"center",color:"rgba(148,163,184,0.3)",fontSize:12,padding:"12px 0"}}>İlk yorumu yap!</div>}
+        
           {comments.map(c=>{
             const isMyComment = c.user_id===user.id;
             return (
