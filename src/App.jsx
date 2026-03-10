@@ -97,7 +97,7 @@ function UserProfileModal({ targetUser, currentUser, onClose }) {
       const [{data:p},{data:f},{data:fc},{data:fg}] = await Promise.all([
         supabase.from("posts").select("*").eq("user_id",targetUser.id).order("created_at",{ascending:false}),
         supabase.from("follows").select("id").eq("follower_id",currentUser.id).eq("following_id",targetUser.id).maybeSingle(),
-        supabase.from("follows").select("*,profiles!follows_follower_id_fkey(username,avatar_url)").eq("following_id",targetUser.id),
+        supabase.from("follows").select("*, profiles(username,avatar_url,bio)").eq("following_id",targetUser.id),
         supabase.from("follows").select("*,profiles!follows_following_id_fkey(username,avatar_url)").eq("follower_id",targetUser.id),
       ]);
       if (p) setPosts(p);
