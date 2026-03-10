@@ -447,7 +447,7 @@ function PostCard({ post, user, onDelete, onUpdate, onProfileClick }) {
           })}
           <div style={{display:"flex",gap:8,marginTop:10}}>
             <input value={commentInput} onChange={e=>setCommentInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addComment()} placeholder="Yorum yaz..." style={{flex:1,background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:20,padding:"8px 14px",color:"#F1F5F9",fontSize:13,outline:"none",fontFamily:"inherit"}}/>
-            <input value={commentInput} onChange={e=>setCommentInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&addComment()} placeholder="Yorum yaz..." style={{flex:1,background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.2)",borderRadius:20,padding:"8px 14px",color:"#F1F5F9",fontSize:13,outline:"none",fontFamily:"inherit"}}/>
+            
             <button onClick={addComment} style={{width:34,height:34,borderRadius:"50%",background:"linear-gradient(135deg,#6366F1,#EC4899)",border:"none",cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
               <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
             </button>
