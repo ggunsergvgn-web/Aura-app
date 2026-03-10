@@ -268,7 +268,7 @@ function FeedScreen({ user, profile }) {
     let media_type = null;
     if (mediaFile) {
       const ext = mediaFile.name.split(".").pop();
-      const path = `${user.id}/${Date.now()}.${ext}`;
+      const path = `avatars/${user.id}_${Date.now()}.${ext}`;
       const { error } = await supabase.storage.from("post-media").upload(path, mediaFile);
       if (!error) {
         const { data: urlData } = supabase.storage.from("post-media").getPublicUrl(path);
