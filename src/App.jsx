@@ -192,7 +192,8 @@ function PostCard({ post, user, onDelete, onUpdate }) {
   const toggleComments = () => {
     if (!showComments) loadComments();
     setShowComments(!showComments);
-  };
+  const { data, error } = await supabase.from("posts").select("*, profiles(username, avatar_url)").order("created_at", { ascending: false }).limit(50);
+console.log("posts:", data, error);
 
   const toggleLike = async () => {
     const newLiked = !liked;
