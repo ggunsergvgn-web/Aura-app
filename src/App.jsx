@@ -658,8 +658,8 @@ function ProfileScreen({ user, profile, onLogout, onUpdateProfile }) {
   useEffect(()=>{
     Promise.all([
       supabase.from("posts").select("*").eq("user_id",user.id).order("created_at",{ascending:false}),
-      supabase.from("follows").select("*,profiles!follows_follower_id_fkey(id,username,avatar_url,bio)").eq("following_id",user.id),
-      supabase.from("follows").select("*,profiles!follows_following_id_fkey(id,username,avatar_url,bio)").eq("follower_id",user.id),
+      supabase.from("follows").select("*, profiles(id,username,avatar_url,bio)").eq("following_id",user.id),
+supabase.from("follows").select("*, profiles(id,username,avatar_url,bio)").eq("follower_id",user.id),
       supabase.from("saved_posts").select("*,posts(*)").eq("user_id",user.id)
     ]).then(([{data:p},{data:f1},{data:f2},{data:s}])=>{
       if(p) setUserPosts(p);
