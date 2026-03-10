@@ -333,8 +333,14 @@ function PostCard({ post, user, onDelete, onUpdate, onProfileClick }) {
   },[]);
 
   const loadComments = async () => {
-    const {data} = await supabase.from("comments").select("*, profiles(username,avatar_url)").eq("post_id",post.id).order("created_at");
-    if (data) { setComments(data); setCommentCount(data.length); }
+    const {data} = await supabase.from("comments").select("*").eq("post_id",post.id).order("created_at");
+    if (!data) return;
+    const withProfiles = await Promise.all(data.map(async c => {
+      const {data:prof} = await supabase.from("profiles").select("username,avatar_url").eq("id",c.user_id).single();
+      return {...c,profiles:prof};
+    }));
+    setComments(withProfiles);
+    setCommentCount(withProfiles.length);
   };
 
   const toggleComments = ()=>{ if(!showComments) loadComments(); setShowComments(!showComments); };
