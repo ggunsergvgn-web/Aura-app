@@ -429,13 +429,22 @@ function PostCard({ post, user, onDelete, onUpdate, onProfileClick }) {
       {showComments&&(
         <div style={{padding:"0 14px 14px",borderTop:"1px solid rgba(99,102,241,0.07)"}}>
           {comments.length===0&&<div style={{textAlign:"center",color:"rgba(148,163,184,0.3)",fontSize:12,padding:"12px 0"}}>İlk yorumu yap!</div>}
-          {comments.map(c=>(
+          {comments.length===0&&<div style={{textAlign:"center",color:"rgba(148,163,184,0.3)",fontSize:12,padding:"12px 0"}}>İlk yorumu yap!</div>}
+          {comments.map(c=>{
+            const isMyComment = c.user_id===user.id;
+            return (
             <div key={c.id} style={{display:"flex",gap:8,marginTop:10,alignItems:"flex-start"}}>
               <Avatar name={c.profiles?.username} url={c.profiles?.avatar_url} size={28}/>
               <div style={{background:"rgba(99,102,241,0.08)",borderRadius:12,padding:"8px 12px",flex:1}}>
-                <div style={{color:"#818CF8",fontSize:11,fontWeight:700,marginBottom:2}}>{c.profiles?.username}</div>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:2}}>
+                  <div style={{color:"#818CF8",fontSize:11,fontWeight:700}}>{c.profiles?.username}</div>
+                  {isMyComment&&<button onClick={async()=>{await supabase.from("comments").delete().eq("id",c.id);loadComments();}} style={{background:"none",border:"none",color:"#F87171",cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>🗑️</button>}
+                </div>
                 <div style={{color:"#CBD5E1",fontSize:13}}>{c.content}</div>
               </div>
+            </div>
+            );
+          })}
             </div>
           ))}
           <div style={{display:"flex",gap:8,marginTop:10}}>
