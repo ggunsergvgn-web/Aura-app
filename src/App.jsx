@@ -667,7 +667,7 @@ supabase.from("follows").select("*, profiles(id,username,avatar_url,bio)").eq("f
       if(f2) setFollowing(f2);
       if(s) setSavedPosts(s.map(x=>x.posts).filter(Boolean));
     });
-  },[user]);
+  },[user, followers.length, following.length]);
 
   const saveProfile = async ()=>{
     if (!newUsername.trim()) return;
