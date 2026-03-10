@@ -8,6 +8,8 @@ const supabase = createClient(
 
 const LOGO = "https://hebljdvucansszxhvnfp.supabase.co/storage/v1/object/public/post-media/image-4.jpg";
 const COLORS = ["#3B82F6","#6366F1","#8B5CF6","#EC4899","#14B8A6","#F59E0B"];
+const MOODS = ["😊","😢","😍","😡","😂","🔥","💯","🎉"];
+const BG_COLORS = ["transparent","#1a0533","#0a1628","#0d2818","#2d1b00","#1a0a0a","#0a0a2d","#1a1a0a"];
 const getColor = (str) => COLORS[(str || "").charCodeAt(0) % COLORS.length];
 
 function Avatar({ name, url, size = 42, online }) {
@@ -75,15 +77,101 @@ function AuthScreen({ onAuth }) {
   );
 }
 
+function UserProfileModal({ targetUser, currentUser, onClose }) {
+  const [posts, setPosts] = useState([]);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [followerCount, setFollowerCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const [{ data: p }, { data: f }, { data: fc }] = await Promise.all([
+        supabase.from("posts").select("*").eq("user_id", targetUser.id).order("created_at", { ascending: false }),
+        supabase.from("follows").select("id").eq("follower_id", currentUser.id).eq("following_id", targetUser.id).maybeSingle(),
+        supabase.from("follows").select("id").eq("following_id", targetUser.id)
+      ]);
+      if (p) setPosts(p);
+      setIsFollowing(!!f);
+      setFollowerCount(fc?.length || 0);
+      setLoading(false);
+    };
+    load();
+  }, [targetUser, currentUser]);
+
+  const toggleFollow = async () => {
+    if (isFollowing) {
+      await supabase.from("follows").delete().eq("follower_id", currentUser.id).eq("following_id", targetUser.id);
+      setIsFollowing(false);
+      setFollowerCount(p => p - 1);
+    } else {
+      await supabase.from("follows").insert({ follower_id: currentUser.id, following_id: targetUser.id });
+      setIsFollowing(true);
+      setFollowerCount(p => p + 1);
+    }
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 100, display: "flex", flexDirection: "column", backdropFilter: "blur(10px)" }}>
+      <div style={{ background: "linear-gradient(180deg, #0d0d2b 0%, #0a0a1a 100%)", flex: 1, overflowY: "auto", borderRadius: "24px 24px 0 0", marginTop: 60 }}>
+        <div style={{ padding: "20px 16px", display: "flex", alignItems: "center", gap: 12, borderBottom: "1px solid rgba(99,102,241,0.15)" }}>
+          <button onClick={onClose} style={{ background: "rgba(99,102,241,0.15)", border: "none", cursor: "pointer", color: "#818CF8", width: 36, height: 36, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          </button>
+          <div style={{ color: "#F1F5F9", fontWeight: 700, fontSize: 16 }}>{targetUser.username}</div>
+        </div>
+        <div style={{ padding: "24px 20px 16px", display: "flex", flexDirection: "column", alignItems: "center", borderBottom: "1px solid rgba(99,102,241,0.1)" }}>
+          <Avatar name={targetUser.username} url={targetUser.avatar_url} size={88} />
+          <div style={{ color: "#F1F5F9", fontSize: 20, fontWeight: 800, marginTop: 12 }}>{targetUser.username}</div>
+          {targetUser.bio && <div style={{ color: "rgba(148,163,184,0.7)", fontSize: 13, marginTop: 6, textAlign: "center" }}>{targetUser.bio}</div>}
+          <div style={{ display: "flex", gap: 32, marginTop: 16 }}>
+            {[[posts.length, "Gönderi"], [followerCount, "Takipçi"]].map(([n, l]) => (
+              <div key={l} style={{ textAlign: "center" }}>
+                <div style={{ color: "#F1F5F9", fontSize: 20, fontWeight: 800 }}>{n}</div>
+                <div style={{ color: "rgba(129,140,248,0.5)", fontSize: 12 }}>{l}</div>
+              </div>
+            ))}
+          </div>
+          {currentUser.id !== targetUser.id && (
+            <button onClick={toggleFollow} style={{ marginTop: 16, padding: "10px 32px", borderRadius: 20, background: isFollowing ? "rgba(99,102,241,0.12)" : "linear-gradient(135deg, #6366F1, #EC4899)", border: isFollowing ? "1px solid rgba(99,102,241,0.3)" : "none", color: isFollowing ? "#818CF8" : "#fff", fontWeight: 700, cursor: "pointer", fontSize: 14, fontFamily: "inherit" }}>
+              {isFollowing ? "Takibi Bırak" : "Takip Et"}
+            </button>
+          )}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 2, padding: 2 }}>
+          {posts.filter(p => p.media_url).map(post => (
+            <div key={post.id} style={{ aspectRatio: "1", overflow: "hidden" }}>
+              {post.media_type === "video" ? <video src={post.media_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <img src={post.media_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
+            </div>
+          ))}
+          {posts.filter(p => p.media_url).length === 0 && <div style={{ gridColumn: "1/-1", textAlign: "center", color: "rgba(148,163,184,0.3)", padding: 40 }}>Henüz gönderi yok</div>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MessagesScreen({ user, allProfiles }) {
   const [selectedUser, setSelectedUser] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [search, setSearch] = useState("");
+  const [unreadCounts, setUnreadCounts] = useState({});
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
+    const channel = supabase.channel("all_messages")
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, (payload) => {
+        const msg = payload.new;
+        if (msg.receiver_id === user.id && (!selectedUser || msg.sender_id !== selectedUser.id)) {
+          setUnreadCounts(prev => ({ ...prev, [msg.sender_id]: (prev[msg.sender_id] || 0) + 1 }));
+        }
+      }).subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [user, selectedUser]);
+
+  useEffect(() => {
     if (!selectedUser) return;
+    setUnreadCounts(prev => ({ ...prev, [selectedUser.id]: 0 }));
     supabase.from("messages").select("*")
       .or(`and(sender_id.eq.${user.id},receiver_id.eq.${selectedUser.id}),and(sender_id.eq.${selectedUser.id},receiver_id.eq.${user.id})`)
       .order("created_at").then(({ data }) => { if (data) setMessages(data); });
@@ -99,15 +187,26 @@ function MessagesScreen({ user, allProfiles }) {
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  const sendMessage = async () => {
-    if (!input.trim() || !selectedUser) return;
-    const temp = { id: "tmp_" + Date.now(), sender_id: user.id, receiver_id: selectedUser.id, content: input.trim(), created_at: new Date().toISOString() };
+  const sendMessage = async (locationText) => {
+    const msgContent = locationText || input.trim();
+    if (!msgContent || !selectedUser) return;
+    const temp = { id: "tmp_" + Date.now(), sender_id: user.id, receiver_id: selectedUser.id, content: msgContent, created_at: new Date().toISOString() };
     setMessages(prev => [...prev, temp]);
-    setInput("");
-    await supabase.from("messages").insert({ sender_id: user.id, receiver_id: selectedUser.id, content: temp.content });
+    if (!locationText) setInput("");
+    await supabase.from("messages").insert({ sender_id: user.id, receiver_id: selectedUser.id, content: msgContent });
+  };
+
+  const shareLocation = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const { latitude, longitude } = pos.coords;
+      const url = `📍 Konumum: https://maps.google.com/?q=${latitude},${longitude}`;
+      sendMessage(url);
+    });
   };
 
   const filtered = allProfiles.filter(u => u.id !== user.id && (u.username || u.email || "").toLowerCase().includes(search.toLowerCase()));
+  const totalUnread = Object.values(unreadCounts).reduce((a, b) => a + b, 0);
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -127,11 +226,14 @@ function MessagesScreen({ user, allProfiles }) {
             {messages.length === 0 && <div style={{ textAlign: "center", color: "rgba(148,163,184,0.4)", fontSize: 13, marginTop: 40 }}>Henüz mesaj yok 👋</div>}
             {messages.map(msg => {
               const isMe = msg.sender_id === user.id;
+              const isLocation = msg.content?.startsWith("📍");
               return (
                 <div key={msg.id} style={{ display: "flex", justifyContent: isMe ? "flex-end" : "flex-start", alignItems: "flex-end", gap: 8 }}>
                   {!isMe && <Avatar name={selectedUser.username} url={selectedUser.avatar_url} size={28} />}
                   <div style={{ maxWidth: "72%", padding: "10px 14px", borderRadius: isMe ? "18px 18px 4px 18px" : "18px 18px 18px 4px", background: isMe ? "linear-gradient(135deg, #6366F1, #EC4899)" : "rgba(255,255,255,0.06)", border: isMe ? "none" : "1px solid rgba(99,102,241,0.2)", color: "#F1F5F9", fontSize: 14, lineHeight: 1.5, opacity: msg.id?.startsWith("tmp_") ? 0.7 : 1 }}>
-                    {msg.content}
+                    {isLocation ? (
+                      <a href={msg.content.split(": ")[1]} target="_blank" rel="noreferrer" style={{ color: "#60A5FA", textDecoration: "none" }}>{msg.content}</a>
+                    ) : msg.content}
                     <div style={{ fontSize: 10, opacity: 0.45, marginTop: 3, textAlign: "right" }}>{new Date(msg.created_at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}</div>
                   </div>
                 </div>
@@ -140,10 +242,11 @@ function MessagesScreen({ user, allProfiles }) {
             <div ref={messagesEndRef} />
           </div>
           <div style={{ padding: "10px 12px 36px", display: "flex", gap: 8, alignItems: "center", background: "rgba(10,10,26,0.95)", backdropFilter: "blur(20px)", borderTop: "1px solid rgba(99,102,241,0.1)" }}>
+            <button onClick={shareLocation} style={{ width: 40, height: 40, borderRadius: "50%", background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 18 }}>📍</button>
             <div style={{ flex: 1, background: "rgba(99,102,241,0.08)", borderRadius: 24, padding: "11px 16px", border: "1px solid rgba(99,102,241,0.2)" }}>
               <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMessage()} placeholder="Mesaj yaz..." style={{ background: "none", border: "none", outline: "none", color: "#F1F5F9", fontSize: 14, width: "100%", fontFamily: "inherit" }} />
             </div>
-            <button onClick={sendMessage} style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg, #6366F1, #EC4899)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(99,102,241,0.4)", flexShrink: 0 }}>
+            <button onClick={() => sendMessage()} style={{ width: 44, height: 44, borderRadius: "50%", background: "linear-gradient(135deg, #6366F1, #EC4899)", border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 4px 20px rgba(99,102,241,0.4)", flexShrink: 0 }}>
               <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
             </button>
           </div>
@@ -151,6 +254,7 @@ function MessagesScreen({ user, allProfiles }) {
       ) : (
         <div style={{ flex: 1, overflowY: "auto", background: "linear-gradient(180deg, #0d0d2b 0%, #0a0a1a 100%)" }}>
           <div style={{ padding: "12px 16px 8px" }}>
+            {totalUnread > 0 && <div style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 12, padding: "8px 14px", marginBottom: 8, color: "#818CF8", fontSize: 13 }}>🔔 {totalUnread} okunmamış mesaj</div>}
             <div style={{ background: "rgba(99,102,241,0.08)", borderRadius: 20, padding: "10px 16px", display: "flex", gap: 8, alignItems: "center", border: "1px solid rgba(99,102,241,0.2)" }}>
               <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="rgba(129,140,248,0.8)" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
               <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Kişi ara..." style={{ background: "none", border: "none", outline: "none", color: "#F1F5F9", fontSize: 13, width: "100%", fontFamily: "inherit" }} />
@@ -160,7 +264,10 @@ function MessagesScreen({ user, allProfiles }) {
             <div style={{ textAlign: "center", color: "rgba(148,163,184,0.3)", padding: 40, fontSize: 14 }}>Henüz kullanıcı yok 😊</div>
           ) : filtered.map(u => (
             <div key={u.id} onClick={() => setSelectedUser(u)} style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-              <Avatar name={u.username || u.email} url={u.avatar_url} size={52} />
+              <div style={{ position: "relative" }}>
+                <Avatar name={u.username || u.email} url={u.avatar_url} size={52} />
+                {unreadCounts[u.id] > 0 && <div style={{ position: "absolute", top: -2, right: -2, background: "#EC4899", borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: "#fff", fontWeight: 700 }}>{unreadCounts[u.id]}</div>}
+              </div>
               <div style={{ flex: 1 }}>
                 <div style={{ color: "#F1F5F9", fontWeight: 700, fontSize: 15 }}>{u.username || u.email}</div>
                 <div style={{ color: "rgba(129,140,248,0.5)", fontSize: 12, marginTop: 2 }}>Mesaj gönder →</div>
@@ -173,9 +280,10 @@ function MessagesScreen({ user, allProfiles }) {
   );
 }
 
-function PostCard({ post, user, onDelete, onUpdate }) {
+function PostCard({ post, user, onDelete, onUpdate, onProfileClick }) {
   const [liked, setLiked] = useState((post.likes || []).includes(user.id));
   const [likeCount, setLikeCount] = useState((post.likes || []).length);
+  const [saved, setSaved] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [comments, setComments] = useState([]);
   const [commentInput, setCommentInput] = useState("");
@@ -184,65 +292,63 @@ function PostCard({ post, user, onDelete, onUpdate }) {
   const [editContent, setEditContent] = useState(post.content || "");
   const isOwner = post.user_id === user.id;
 
+  useEffect(() => {
+    supabase.from("saved_posts").select("id").eq("user_id", user.id).eq("post_id", post.id).maybeSingle().then(({ data }) => setSaved(!!data));
+  }, []);
+
   const loadComments = async () => {
     const { data } = await supabase.from("comments").select("*, profiles(username, avatar_url)").eq("post_id", post.id).order("created_at");
     if (data) setComments(data);
   };
 
-  const toggleComments = () => {
-    if (!showComments) loadComments();
-    setShowComments(!showComments);
-  const { data, error } = await supabase.from("posts").select("*, profiles(username, avatar_url)").order("created_at", { ascending: false }).limit(50);
-console.log("posts:", data, error);
+  const toggleComments = () => { if (!showComments) loadComments(); setShowComments(!showComments); };
 
   const toggleLike = async () => {
     const newLiked = !liked;
-    setLiked(newLiked);
-    setLikeCount(prev => newLiked ? prev + 1 : prev - 1);
+    setLiked(newLiked); setLikeCount(prev => newLiked ? prev + 1 : prev - 1);
     const newLikes = newLiked ? [...(post.likes || []), user.id] : (post.likes || []).filter(id => id !== user.id);
     await supabase.from("posts").update({ likes: newLikes }).eq("id", post.id);
+  };
+
+  const toggleSave = async () => {
+    if (saved) {
+      await supabase.from("saved_posts").delete().eq("user_id", user.id).eq("post_id", post.id);
+      setSaved(false);
+    } else {
+      await supabase.from("saved_posts").insert({ user_id: user.id, post_id: post.id });
+      setSaved(true);
+    }
   };
 
   const addComment = async () => {
     if (!commentInput.trim()) return;
     await supabase.from("comments").insert({ post_id: post.id, user_id: user.id, content: commentInput.trim() });
-    setCommentInput("");
-    loadComments();
-  };
-const loadPosts = async () => {
-    const { data, error } = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(50);
-    if (error) { console.log(error); return; }
-    if (data) {
-      const postsWithProfiles = await Promise.all(data.map(async (post) => {
-        const { data: prof } = await supabase.from("profiles").select("username, avatar_url").eq("id", post.user_id).single();
-        return { ...post, profiles: prof };
-      }));
-      setPosts(postsWithProfiles);
-    }
-  };
-    await supabase.from("posts").delete().eq("id", post.id);
-    onDelete(post.id);
+    setCommentInput(""); loadComments();
   };
 
-  const saveEdit = async () => {
-    await supabase.from("posts").update({ content: editContent }).eq("id", post.id);
-    onUpdate(post.id, editContent);
-    setEditing(false);
-  };
+  const deletePost = async () => { await supabase.from("posts").delete().eq("id", post.id); onDelete(post.id); };
+  const saveEdit = async () => { await supabase.from("posts").update({ content: editContent }).eq("id", post.id); onUpdate(post.id, editContent); setEditing(false); };
+
+  const bgStyle = post.bg_color && post.bg_color !== "transparent" ? { background: post.bg_color } : {};
 
   return (
-    <div style={{ margin: "0 16px 12px", borderRadius: 20, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(99,102,241,0.12)", overflow: "hidden" }}>
+    <div style={{ margin: "0 16px 12px", borderRadius: 20, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(99,102,241,0.12)", overflow: "hidden", ...bgStyle }}>
       <div style={{ padding: "12px 14px 8px", display: "flex", alignItems: "center", gap: 10 }}>
-        <Avatar name={post.profiles?.username || "?"} url={post.profiles?.avatar_url} size={40} />
-        <div style={{ flex: 1 }}>
-          <div style={{ color: "#F1F5F9", fontWeight: 700, fontSize: 14 }}>{post.profiles?.username || "Kullanıcı"}</div>
-          <div style={{ color: "rgba(129,140,248,0.4)", fontSize: 11 }}>{new Date(post.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}</div>
+        <div onClick={() => onProfileClick && onProfileClick(post.profiles)} style={{ cursor: "pointer" }}>
+          <Avatar name={post.profiles?.username || "?"} url={post.profiles?.avatar_url} size={40} />
+        </div>
+        <div style={{ flex: 1 }} onClick={() => onProfileClick && onProfileClick(post.profiles)}>
+          <div style={{ color: "#F1F5F9", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>{post.profiles?.username || "Kullanıcı"} {post.mood && <span>{post.mood}</span>}</div>
+          <div style={{ color: "rgba(129,140,248,0.4)", fontSize: 11, display: "flex", gap: 6 }}>
+            {new Date(post.created_at).toLocaleDateString("tr-TR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}
+            {post.location && <span>· 📍 {post.location}</span>}
+          </div>
         </div>
         {isOwner && (
           <div style={{ position: "relative" }}>
-            <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(148,163,184,0.5)", padding: 4 }}>⋯</button>
+            <button onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(148,163,184,0.5)", padding: 4, fontSize: 20 }}>⋯</button>
             {menuOpen && (
-              <div style={{ position: "absolute", right: 0, top: 28, background: "#1a1a3e", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 12, overflow: "hidden", zIndex: 10, minWidth: 120 }}>
+              <div style={{ position: "absolute", right: 0, top: 28, background: "#1a1a3e", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 12, overflow: "hidden", zIndex: 10, minWidth: 130 }}>
                 <button onClick={() => { setEditing(true); setMenuOpen(false); }} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", color: "#818CF8", cursor: "pointer", textAlign: "left", fontSize: 13, fontFamily: "inherit" }}>✏️ Düzenle</button>
                 <button onClick={deletePost} style={{ display: "block", width: "100%", padding: "10px 16px", background: "none", border: "none", color: "#F87171", cursor: "pointer", textAlign: "left", fontSize: 13, fontFamily: "inherit" }}>🗑️ Sil</button>
               </div>
@@ -266,14 +372,17 @@ const loadPosts = async () => {
         <img src={post.media_url} alt="" style={{ width: "100%", maxHeight: 320, objectFit: "cover" }} />
       )}
 
-      <div style={{ padding: "10px 14px", display: "flex", gap: 20, borderTop: "1px solid rgba(99,102,241,0.08)" }}>
-        <button onClick={toggleLike} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: liked ? "#EC4899" : "rgba(148,163,184,0.5)", fontSize: 13, fontFamily: "inherit" }}>
+      <div style={{ padding: "10px 14px", display: "flex", gap: 16, borderTop: "1px solid rgba(99,102,241,0.08)", alignItems: "center" }}>
+        <button onClick={toggleLike} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, color: liked ? "#EC4899" : "rgba(148,163,184,0.5)", fontSize: 13, fontFamily: "inherit" }}>
           <svg width="18" height="18" fill={liked ? "#EC4899" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
           {likeCount}
         </button>
-        <button onClick={toggleComments} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, color: showComments ? "#818CF8" : "rgba(148,163,184,0.5)", fontSize: 13, fontFamily: "inherit" }}>
+        <button onClick={toggleComments} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, color: showComments ? "#818CF8" : "rgba(148,163,184,0.5)", fontSize: 13, fontFamily: "inherit" }}>
           <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
           {comments.length > 0 ? comments.length : "Yorum"}
+        </button>
+        <button onClick={toggleSave} style={{ background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 5, color: saved ? "#F59E0B" : "rgba(148,163,184,0.5)", fontSize: 13, fontFamily: "inherit", marginLeft: "auto" }}>
+          <svg width="18" height="18" fill={saved ? "#F59E0B" : "none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg>
         </button>
       </div>
 
@@ -300,13 +409,19 @@ const loadPosts = async () => {
   );
 }
 
-function FeedScreen({ user, profile }) {
+function FeedScreen({ user, profile, onProfileClick }) {
   const [posts, setPosts] = useState([]);
   const [content, setContent] = useState("");
   const [mediaFile, setMediaFile] = useState(null);
   const [mediaPreview, setMediaPreview] = useState(null);
   const [mediaType, setMediaType] = useState(null);
   const [posting, setPosting] = useState(false);
+  const [selectedMood, setSelectedMood] = useState(null);
+  const [selectedBg, setSelectedBg] = useState("transparent");
+  const [showMoods, setShowMoods] = useState(false);
+  const [showBgs, setShowBgs] = useState(false);
+  const [addingLocation, setAddingLocation] = useState(false);
+  const [location, setLocation] = useState(null);
   const fileRef = useRef();
 
   useEffect(() => {
@@ -318,8 +433,28 @@ function FeedScreen({ user, profile }) {
   }, []);
 
   const loadPosts = async () => {
-    const { data } = await supabase.from("posts").select("*, profiles(username, avatar_url)").order("created_at", { ascending: false }).limit(50);
-    if (data) setPosts(data);
+    const { data, error } = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(50);
+    if (error || !data) return;
+    const withProfiles = await Promise.all(data.map(async (post) => {
+      const { data: prof } = await supabase.from("profiles").select("username, avatar_url").eq("id", post.user_id).single();
+      return { ...post, profiles: prof };
+    }));
+    setPosts(withProfiles);
+  };
+
+  const getLocation = () => {
+    if (!navigator.geolocation) return;
+    setAddingLocation(true);
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const { latitude, longitude } = pos.coords;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
+        const data = await res.json();
+        const loc = data.address?.city || data.address?.town || data.address?.county || "Bilinmiyor";
+        setLocation(loc);
+      } catch { setLocation("Konum alındı"); }
+      setAddingLocation(false);
+    }, () => setAddingLocation(false));
   };
 
   const handleFile = (e) => {
@@ -342,39 +477,65 @@ function FeedScreen({ user, profile }) {
       const { error } = await supabase.storage.from("post-media").upload(path, mediaFile);
       if (!error) {
         const { data: urlData } = supabase.storage.from("post-media").getPublicUrl(path);
-        media_url = urlData.publicUrl;
-        media_type = mediaType;
+        media_url = urlData.publicUrl; media_type = mediaType;
       }
     }
-    await supabase.from("posts").insert({ user_id: user.id, content: content.trim(), media_url, media_type });
-    setContent(""); setMediaFile(null); setMediaPreview(null); setMediaType(null);
+    await supabase.from("posts").insert({ user_id: user.id, content: content.trim(), media_url, media_type, mood: selectedMood, bg_color: selectedBg, location });
+    setContent(""); setMediaFile(null); setMediaPreview(null); setMediaType(null); setSelectedMood(null); setSelectedBg("transparent"); setLocation(null);
     setPosting(false);
   };
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
       <div style={{ overflowY: "auto", flex: 1, background: "linear-gradient(180deg, #0d0d2b 0%, #0a0a1a 100%)" }}>
-        <div style={{ margin: "12px 16px", borderRadius: 20, background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.2)", padding: 14 }}>
+        <div style={{ margin: "12px 16px", borderRadius: 20, background: selectedBg !== "transparent" ? selectedBg : "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.2)", padding: 14, transition: "background 0.3s" }}>
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
             <Avatar name={profile?.username || "?"} url={profile?.avatar_url} size={40} />
-            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Ne düşünüyorsun?" rows={2} style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#F1F5F9", fontSize: 14, fontFamily: "inherit", resize: "none", lineHeight: 1.5, paddingTop: 8 }} />
+            <textarea value={content} onChange={e => setContent(e.target.value)} placeholder={`Ne düşünüyorsun? ${selectedMood || ""}`} rows={2} style={{ flex: 1, background: "none", border: "none", outline: "none", color: "#F1F5F9", fontSize: 14, fontFamily: "inherit", resize: "none", lineHeight: 1.5, paddingTop: 8 }} />
           </div>
+          {(location || addingLocation) && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6, color: "#60A5FA", fontSize: 12 }}>
+              📍 {addingLocation ? "Konum alınıyor..." : location}
+              {location && <button onClick={() => setLocation(null)} style={{ background: "none", border: "none", color: "#F87171", cursor: "pointer", fontSize: 14 }}>×</button>}
+            </div>
+          )}
           {mediaPreview && (
             <div style={{ position: "relative", marginTop: 10, borderRadius: 12, overflow: "hidden" }}>
               {mediaType === "video" ? <video src={mediaPreview} style={{ width: "100%", maxHeight: 200, objectFit: "cover" }} controls /> : <img src={mediaPreview} alt="" style={{ width: "100%", maxHeight: 200, objectFit: "cover" }} />}
               <button onClick={() => { setMediaFile(null); setMediaPreview(null); }} style={{ position: "absolute", top: 8, right: 8, background: "rgba(0,0,0,0.6)", border: "none", borderRadius: "50%", width: 28, height: 28, color: "#fff", cursor: "pointer", fontSize: 16 }}>×</button>
             </div>
           )}
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 10 }}>
-            <button onClick={() => fileRef.current.click()} style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 20, padding: "6px 14px", color: "#818CF8", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>📷 Medya</button>
-            <input ref={fileRef} type="file" accept="image/*,video/*" onChange={handleFile} style={{ display: "none" }} />
+          {showMoods && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+              {MOODS.map(m => <button key={m} onClick={() => { setSelectedMood(m); setShowMoods(false); }} style={{ fontSize: 22, background: selectedMood === m ? "rgba(99,102,241,0.3)" : "rgba(255,255,255,0.05)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 10, padding: "4px 8px", cursor: "pointer" }}>{m}</button>)}
+            </div>
+          )}
+          {showBgs && (
+            <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
+              {BG_COLORS.map(c => <button key={c} onClick={() => { setSelectedBg(c); setShowBgs(false); }} style={{ width: 32, height: 32, borderRadius: 8, background: c === "transparent" ? "rgba(255,255,255,0.1)" : c, border: selectedBg === c ? "2px solid #818CF8" : "1px solid rgba(99,102,241,0.3)", cursor: "pointer" }}>{c === "transparent" ? "✕" : ""}</button>)}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 6, justifyContent: "space-between", alignItems: "center", marginTop: 10, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button onClick={() => fileRef.current.click()} style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 20, padding: "6px 12px", color: "#818CF8", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>📷</button>
+              <input ref={fileRef} type="file" accept="image/*,video/*" onChange={handleFile} style={{ display: "none" }} />
+              <button onClick={() => { setShowMoods(!showMoods); setShowBgs(false); }} style={{ background: selectedMood ? "rgba(99,102,241,0.3)" : "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 20, padding: "6px 12px", color: "#818CF8", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>{selectedMood || "😊"}</button>
+              <button onClick={() => { setShowBgs(!showBgs); setShowMoods(false); }} style={{ background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 20, padding: "6px 12px", color: "#818CF8", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>🎨</button>
+              <button onClick={getLocation} style={{ background: location ? "rgba(96,165,250,0.2)" : "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 20, padding: "6px 12px", color: location ? "#60A5FA" : "#818CF8", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>📍</button>
+            </div>
             <button onClick={submitPost} disabled={posting || (!content.trim() && !mediaFile)} style={{ background: "linear-gradient(135deg, #6366F1, #EC4899)", border: "none", borderRadius: 20, padding: "8px 20px", color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", opacity: (!content.trim() && !mediaFile) ? 0.4 : 1 }}>
               {posting ? "⏳" : "Paylaş"}
             </button>
           </div>
         </div>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", padding: "0 16px 8px" }}>
+          <button onClick={loadPosts} style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.2)", borderRadius: 20, padding: "6px 14px", color: "#818CF8", fontSize: 12, cursor: "pointer", fontFamily: "inherit" }}>🔄 Yenile</button>
+        </div>
+
+        {posts.length === 0 && <div style={{ textAlign: "center", color: "rgba(148,163,184,0.3)", padding: 40, fontSize: 14 }}>Henüz gönderi yok 🌀</div>}
         {posts.map(post => (
-          <PostCard key={post.id} post={post} user={user}
+          <PostCard key={post.id} post={post} user={user} onProfileClick={onProfileClick}
             onDelete={(id) => setPosts(prev => prev.filter(p => p.id !== id))}
             onUpdate={(id, content) => setPosts(prev => prev.map(p => p.id === id ? { ...p, content } : p))}
           />
@@ -384,12 +545,21 @@ function FeedScreen({ user, profile }) {
   );
 }
 
-function KesfetScreen({ user, allProfiles }) {
+function KesfetScreen({ user, allProfiles, onProfileClick }) {
   const [search, setSearch] = useState("");
   const [posts, setPosts] = useState([]);
 
   useEffect(() => {
-    supabase.from("posts").select("*, profiles(username, avatar_url)").order("created_at", { ascending: false }).limit(30).then(({ data }) => { if (data) setPosts(data); });
+    const load = async () => {
+      const { data } = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(30);
+      if (!data) return;
+      const withProfiles = await Promise.all(data.map(async (post) => {
+        const { data: prof } = await supabase.from("profiles").select("username, avatar_url").eq("id", post.user_id).single();
+        return { ...post, profiles: prof };
+      }));
+      setPosts(withProfiles);
+    };
+    load();
   }, []);
 
   const filtered = allProfiles.filter(u => u.id !== user.id && (u.username || "").toLowerCase().includes(search.toLowerCase()) && search.length > 0);
@@ -405,25 +575,25 @@ function KesfetScreen({ user, allProfiles }) {
       {search.length > 0 ? (
         filtered.length === 0 ? <div style={{ textAlign: "center", color: "rgba(148,163,184,0.4)", padding: 30, fontSize: 14 }}>Kullanıcı bulunamadı</div> :
         filtered.map(u => (
-          <div key={u.id} style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+          <div key={u.id} onClick={() => onProfileClick(u)} style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
             <Avatar name={u.username || u.email} url={u.avatar_url} size={48} />
             <div style={{ flex: 1 }}>
               <div style={{ color: "#F1F5F9", fontWeight: 700 }}>{u.username || u.email}</div>
-              <div style={{ color: "rgba(129,140,248,0.5)", fontSize: 12 }}>{u.email}</div>
+              {u.bio && <div style={{ color: "rgba(148,163,184,0.5)", fontSize: 12 }}>{u.bio}</div>}
             </div>
           </div>
         ))
       ) : (
         <div>
           <div style={{ padding: "16px 16px 8px", color: "rgba(129,140,248,0.5)", fontSize: 11, fontWeight: 700, letterSpacing: 2 }}>POPÜLER GÖNDERİLER</div>
-          {posts.length === 0 ? <div style={{ textAlign: "center", color: "rgba(148,163,184,0.3)", padding: 40, fontSize: 14 }}>Henüz gönderi yok 🌀</div> :
-          posts.map(post => (
+          {posts.map(post => (
             <div key={post.id} style={{ margin: "0 16px 12px", borderRadius: 20, overflow: "hidden", border: "1px solid rgba(99,102,241,0.15)", background: "rgba(99,102,241,0.04)" }}>
               {post.media_url && (post.media_type === "video" ? <video src={post.media_url} style={{ width: "100%", maxHeight: 250, objectFit: "cover" }} controls /> : <img src={post.media_url} alt="" style={{ width: "100%", maxHeight: 250, objectFit: "cover" }} />)}
               <div style={{ padding: "12px 14px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                <div onClick={() => onProfileClick(post.profiles)} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, cursor: "pointer" }}>
                   <Avatar name={post.profiles?.username} url={post.profiles?.avatar_url} size={30} />
-                  <span style={{ color: "#818CF8", fontWeight: 700, fontSize: 13 }}>{post.profiles?.username}</span>
+                  <span style={{ color: "#818CF8", fontWeight: 700, fontSize: 13 }}>{post.profiles?.username} {post.mood}</span>
+                  {post.location && <span style={{ color: "rgba(96,165,250,0.6)", fontSize: 11 }}>📍 {post.location}</span>}
                 </div>
                 {post.content && <div style={{ color: "#CBD5E1", fontSize: 13, lineHeight: 1.5 }}>{post.content}</div>}
               </div>
@@ -435,30 +605,41 @@ function KesfetScreen({ user, allProfiles }) {
   );
 }
 
-function ProfileScreen({ user, profile, onLogout, onUpdateProfile, allProfiles }) {
+function ProfileScreen({ user, profile, onLogout, onUpdateProfile }) {
   const [editing, setEditing] = useState(false);
   const [newUsername, setNewUsername] = useState(profile?.username || "");
+  const [newBio, setNewBio] = useState(profile?.bio || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [userPosts, setUserPosts] = useState([]);
+  const [savedPosts, setSavedPosts] = useState([]);
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
+  const [activeTab, setActiveTab] = useState("posts");
   const avatarRef = useRef();
 
   useEffect(() => {
-    supabase.from("posts").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).then(({ data }) => { if (data) setUserPosts(data); });
-    supabase.from("follows").select("*").eq("following_id", user.id).then(({ data }) => { if (data) setFollowers(data); });
-    supabase.from("follows").select("*").eq("follower_id", user.id).then(({ data }) => { if (data) setFollowing(data); });
+    Promise.all([
+      supabase.from("posts").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      supabase.from("follows").select("*").eq("following_id", user.id),
+      supabase.from("follows").select("*").eq("follower_id", user.id),
+      supabase.from("saved_posts").select("*, posts(*)").eq("user_id", user.id)
+    ]).then(([{ data: p }, { data: f1 }, { data: f2 }, { data: s }]) => {
+      if (p) setUserPosts(p);
+      if (f1) setFollowers(f1);
+      if (f2) setFollowing(f2);
+      if (s) setSavedPosts(s.map(x => x.posts).filter(Boolean));
+    });
   }, [user]);
 
-  const saveUsername = async () => {
+  const saveProfile = async () => {
     if (!newUsername.trim()) return;
     setSaving(true); setError("");
     const { data: ex } = await supabase.from("profiles").select("id").eq("username", newUsername.trim()).neq("id", user.id).maybeSingle();
     if (ex) { setError("Bu kullanıcı adı alınmış!"); setSaving(false); return; }
-    await supabase.from("profiles").update({ username: newUsername.trim() }).eq("id", user.id);
-    onUpdateProfile({ ...profile, username: newUsername.trim() });
+    await supabase.from("profiles").update({ username: newUsername.trim(), bio: newBio.trim() }).eq("id", user.id);
+    onUpdateProfile({ ...profile, username: newUsername.trim(), bio: newBio.trim() });
     setEditing(false); setSaving(false);
   };
 
@@ -476,6 +657,8 @@ function ProfileScreen({ user, profile, onLogout, onUpdateProfile, allProfiles }
     setUploadingAvatar(false);
   };
 
+  const displayPosts = activeTab === "posts" ? userPosts.filter(p => p.media_url) : savedPosts.filter(p => p?.media_url);
+
   return (
     <div style={{ flex: 1, overflowY: "auto", background: "linear-gradient(180deg, #0d0d2b 0%, #0a0a1a 100%)" }}>
       <div style={{ padding: "24px 20px 16px", display: "flex", flexDirection: "column", alignItems: "center", borderBottom: "1px solid rgba(99,102,241,0.15)" }}>
@@ -488,10 +671,11 @@ function ProfileScreen({ user, profile, onLogout, onUpdateProfile, allProfiles }
         </div>
         {editing ? (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 8, width: "100%" }}>
-            <input value={newUsername} onChange={e => setNewUsername(e.target.value)} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 12, padding: "10px 16px", color: "#F1F5F9", fontSize: 15, outline: "none", fontFamily: "inherit", textAlign: "center", width: "70%", boxSizing: "border-box" }} />
+            <input value={newUsername} onChange={e => setNewUsername(e.target.value)} placeholder="Kullanıcı adı" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 12, padding: "10px 16px", color: "#F1F5F9", fontSize: 15, outline: "none", fontFamily: "inherit", textAlign: "center", width: "80%", boxSizing: "border-box" }} />
+            <textarea value={newBio} onChange={e => setNewBio(e.target.value)} placeholder="Hakkında..." rows={2} style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(99,102,241,0.3)", borderRadius: 12, padding: "10px 16px", color: "#F1F5F9", fontSize: 13, outline: "none", fontFamily: "inherit", textAlign: "center", width: "80%", boxSizing: "border-box", resize: "none" }} />
             {error && <div style={{ color: "#F87171", fontSize: 12 }}>{error}</div>}
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={saveUsername} disabled={saving} style={{ padding: "8px 20px", borderRadius: 12, background: "linear-gradient(135deg, #6366F1, #EC4899)", border: "none", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{saving ? "⏳" : "Kaydet"}</button>
+              <button onClick={saveProfile} disabled={saving} style={{ padding: "8px 20px", borderRadius: 12, background: "linear-gradient(135deg, #6366F1, #EC4899)", border: "none", color: "#fff", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}>{saving ? "⏳" : "Kaydet"}</button>
               <button onClick={() => setEditing(false)} style={{ padding: "8px 20px", borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "none", color: "#F1F5F9", cursor: "pointer", fontFamily: "inherit" }}>İptal</button>
             </div>
           </div>
@@ -499,10 +683,11 @@ function ProfileScreen({ user, profile, onLogout, onUpdateProfile, allProfiles }
           <>
             <div style={{ color: "#F1F5F9", fontSize: 22, fontWeight: 800 }}>{profile?.username || "Kullanıcı"}</div>
             <div style={{ color: "rgba(129,140,248,0.6)", fontSize: 13, marginTop: 3 }}>{user?.email}</div>
-            <button onClick={() => setEditing(true)} style={{ marginTop: 10, padding: "7px 20px", borderRadius: 20, background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)", color: "#818CF8", fontWeight: 600, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>Kullanıcı adını değiştir</button>
+            {profile?.bio && <div style={{ color: "rgba(148,163,184,0.7)", fontSize: 13, marginTop: 8, textAlign: "center", maxWidth: 280 }}>{profile.bio}</div>}
+            <button onClick={() => setEditing(true)} style={{ marginTop: 10, padding: "7px 20px", borderRadius: 20, background: "rgba(99,102,241,0.12)", border: "1px solid rgba(99,102,241,0.3)", color: "#818CF8", fontWeight: 600, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>Profili Düzenle</button>
           </>
         )}
-        <div style={{ display: "flex", gap: 36, marginTop: 20 }}>
+        <div style={{ display: "flex", gap: 32, marginTop: 20 }}>
           {[[userPosts.length, "Gönderi"], [followers.length, "Takipçi"], [following.length, "Takip"]].map(([num, label]) => (
             <div key={label} style={{ textAlign: "center" }}>
               <div style={{ color: "#F1F5F9", fontSize: 22, fontWeight: 800 }}>{num}</div>
@@ -512,13 +697,18 @@ function ProfileScreen({ user, profile, onLogout, onUpdateProfile, allProfiles }
         </div>
         <button onClick={onLogout} style={{ marginTop: 16, padding: "9px 28px", borderRadius: 20, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", color: "#F87171", fontWeight: 700, cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>Çıkış Yap</button>
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 2, padding: "2px" }}>
-        {userPosts.filter(p => p.media_url).map(post => (
+      <div style={{ display: "flex", borderBottom: "1px solid rgba(99,102,241,0.15)" }}>
+        {[["posts","📷 Gönderiler"],["saved","🔖 Kaydedilenler"]].map(([id, label]) => (
+          <button key={id} onClick={() => setActiveTab(id)} style={{ flex: 1, padding: "12px", background: "none", border: "none", borderBottom: activeTab === id ? "2px solid #818CF8" : "2px solid transparent", color: activeTab === id ? "#818CF8" : "rgba(148,163,184,0.4)", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit" }}>{label}</button>
+        ))}
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 2, padding: 2 }}>
+        {displayPosts.map(post => (
           <div key={post.id} style={{ aspectRatio: "1", overflow: "hidden" }}>
             {post.media_type === "video" ? <video src={post.media_url} style={{ width: "100%", height: "100%", objectFit: "cover" }} /> : <img src={post.media_url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />}
           </div>
         ))}
-        {userPosts.filter(p => p.media_url).length === 0 && <div style={{ gridColumn: "1/-1", textAlign: "center", color: "rgba(148,163,184,0.3)", padding: 40, fontSize: 14 }}>Henüz gönderi yok 🌀</div>}
+        {displayPosts.length === 0 && <div style={{ gridColumn: "1/-1", textAlign: "center", color: "rgba(148,163,184,0.3)", padding: 40, fontSize: 14 }}>{activeTab === "saved" ? "Kaydedilen gönderi yok 🔖" : "Henüz gönderi yok 🌀"}</div>}
       </div>
     </div>
   );
@@ -530,6 +720,7 @@ export default function App() {
   const [profile, setProfile] = useState(null);
   const [allProfiles, setAllProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [viewingProfile, setViewingProfile] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -551,9 +742,13 @@ export default function App() {
       ]);
       setProfile(prof);
       if (all) setAllProfiles(all);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
+  };
+
+  const handleProfileClick = (profileData) => {
+    if (!profileData) return;
+    const full = allProfiles.find(p => p.username === profileData.username) || profileData;
+    setViewingProfile(full);
   };
 
   const tabs = [
@@ -565,8 +760,9 @@ export default function App() {
 
   if (loading) return (
     <div style={{ background: "linear-gradient(160deg, #0a0a1a 0%, #0d0d2b 50%, #0a0a1a 100%)", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 20 }}>
-      <img src={LOGO} alt="Aura SC" style={{ width: 100, height: 100, borderRadius: 25, objectFit: "cover", boxShadow: "0 0 60px rgba(99,102,241,0.6), 0 0 120px rgba(236,72,153,0.3)" }} />
+      <img src={LOGO} alt="Aura SC" style={{ width: 100, height: 100, borderRadius: 25, objectFit: "cover", boxShadow: "0 0 60px rgba(99,102,241,0.6), 0 0 120px rgba(236,72,153,0.3)", animation: "pulse 2s infinite" }} />
       <div style={{ color: "rgba(148,163,184,0.6)", fontSize: 14 }}>Yükleniyor...</div>
+      <style>{`@keyframes pulse { 0%,100%{transform:scale(1);box-shadow:0 0 60px rgba(99,102,241,0.6)} 50%{transform:scale(1.05);box-shadow:0 0 80px rgba(236,72,153,0.8)} }`}</style>
     </div>
   );
 
@@ -590,15 +786,16 @@ export default function App() {
 
         {!user ? <AuthScreen onAuth={(u) => { setUser(u); loadProfile(u.id); }} /> : (
           <>
+            {viewingProfile && <UserProfileModal targetUser={viewingProfile} currentUser={user} onClose={() => setViewingProfile(null)} />}
             {activeTab === "messages" && <MessagesScreen user={user} allProfiles={allProfiles} />}
-            {activeTab === "kesfet" && <KesfetScreen user={user} allProfiles={allProfiles} />}
-            {activeTab === "feed" && <FeedScreen user={user} profile={profile} />}
-            {activeTab === "profile" && <ProfileScreen user={user} profile={profile} allProfiles={allProfiles} onLogout={() => { supabase.auth.signOut(); setUser(null); setProfile(null); }} onUpdateProfile={(p) => { setProfile(p); setAllProfiles(prev => prev.map(u => u.id === p.id ? p : u)); }} />}
+            {activeTab === "kesfet" && <KesfetScreen user={user} allProfiles={allProfiles} onProfileClick={handleProfileClick} />}
+            {activeTab === "feed" && <FeedScreen user={user} profile={profile} onProfileClick={handleProfileClick} />}
+            {activeTab === "profile" && <ProfileScreen user={user} profile={profile} onLogout={() => { supabase.auth.signOut(); setUser(null); setProfile(null); }} onUpdateProfile={(p) => { setProfile(p); setAllProfiles(prev => prev.map(u => u.id === p.id ? p : u)); }} />}
             <div style={{ padding: "8px 8px 32px", display: "flex", justifyContent: "space-around", background: "rgba(10,10,26,0.95)", backdropFilter: "blur(24px)", borderTop: "1px solid rgba(99,102,241,0.12)", zIndex: 10 }}>
               {tabs.map(tab => {
                 const active = activeTab === tab.id;
                 return (
-                  <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ background: active ? "rgba(99,102,241,0.15)" : "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, color: active ? "#818CF8" : "rgba(148,163,184,0.3)", padding: "8px 16px", borderRadius: 16, transition: "all 0.2s" }}>
+                  <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={{ background: active ? "rgba(99,102,241,0.15)" : "none", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3, color: active ? "#818CF8" : "rgba(148,163,184,0.3)", padding: "8px 16px", borderRadius: 16 }}>
                     {tab.icon}
                     <span style={{ fontSize: 10, fontWeight: active ? 700 : 500 }}>{tab.label}</span>
                   </button>
