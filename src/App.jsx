@@ -101,9 +101,9 @@ function MessagesScreen({ user, profile, allProfiles }) {
 
   const sendMessage = async () => {
     if (!input.trim() || !selectedUser) return;
-    await supabase.from("messages").insert({ sender_id: user.id, receiver_id: selectedUser.id, content: input.trim() });
-    setInput("");
-  };
+    const { data: newMsg } = await supabase.from("messages").insert({ sender_id: user.id, receiver_id: selectedUser.id, content: input.trim() }).select().single();
+    if (newMsg) setMessages(prev => [...prev,
+  setInput("");
 
   const filtered = allProfiles.filter(u => u.id !== user.id && (u.username || u.email || "").toLowerCase().includes(search.toLowerCase()));
 
