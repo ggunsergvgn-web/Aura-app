@@ -209,8 +209,17 @@ console.log("posts:", data, error);
     setCommentInput("");
     loadComments();
   };
-
-  const deletePost = async () => {
+const loadPosts = async () => {
+    const { data, error } = await supabase.from("posts").select("*").order("created_at", { ascending: false }).limit(50);
+    if (error) { console.log(error); return; }
+    if (data) {
+      const postsWithProfiles = await Promise.all(data.map(async (post) => {
+        const { data: prof } = await supabase.from("profiles").select("username, avatar_url").eq("id", post.user_id).single();
+        return { ...post, profiles: prof };
+      }));
+      setPosts(postsWithProfiles);
+    }
+  };
     await supabase.from("posts").delete().eq("id", post.id);
     onDelete(post.id);
   };
