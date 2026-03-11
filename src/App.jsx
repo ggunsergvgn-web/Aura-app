@@ -724,6 +724,25 @@ supabase.from("follows").select("*, profiles(id,username,avatar_url,bio)").eq("f
 
   return (
     <div style={{flex:1,overflowY:"auto",background:"linear-gradient(180deg,#0d0d2b,#0a0a1a)"}}>
+      {selectedPost&&(
+  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:300,display:"flex",flexDirection:"column",backdropFilter:"blur(12px)"}} onClick={()=>setSelectedPost(null)}>
+    <div style={{background:"#0d0d2b",flex:1,overflowY:"auto",borderRadius:"24px 24px 0 0",marginTop:60}} onClick={e=>e.stopPropagation()}>
+      <div style={{padding:"16px",display:"flex",alignItems:"center",gap:12,borderBottom:"1px solid rgba(99,102,241,0.15)"}}>
+        <button onClick={()=>setSelectedPost(null)} style={{background:"rgba(99,102,241,0.15)",border:"none",cursor:"pointer",color:"#818CF8",width:36,height:36,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}}>
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+        </button>
+        <div style={{color:"#F1F5F9",fontWeight:700}}>Gönderi</div>
+        <div style={{marginLeft:"auto",display:"flex",gap:8}}>
+          <button onClick={()=>setSelectedPost(null)} style={{padding:"6px 14px",borderRadius:10,background:"rgba(99,102,241,0.15)",border:"none",color:"#818CF8",cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>✏️ Düzenle</button>
+          <button onClick={async()=>{await supabase.from("posts").delete().eq("id",selectedPost.id);setUserPosts(prev=>prev.filter(p=>p.id!==selectedPost.id));setSelectedPost(null);}} style={{padding:"6px 14px",borderRadius:10,background:"rgba(239,68,68,0.1)",border:"none",color:"#F87171",cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>🗑️ Sil</button>
+        </div>
+      </div>
+      {selectedPost.media_url&&(selectedPost.media_type==="video"?<video src={selectedPost.media_url} style={{width:"100%",maxHeight:400,objectFit:"cover"}} controls/>:<img src={selectedPost.media_url} alt="" style={{width:"100%",maxHeight:400,objectFit:"cover"}}/>)}
+      {selectedPost.content&&<div style={{padding:"16px",color:"#CBD5E1",fontSize:15,lineHeight:1.65}}>{selectedPost.content}</div>}
+      <div style={{padding:"12px 16px",color:"rgba(129,140,248,0.4)",fontSize:12}}>{new Date(selectedPost.created_at).toLocaleDateString("tr-TR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+    </div>
+  </div>
+)}
       {showFollowModal==="followers"&&<FollowModal list={followers} title={`Takipçiler (${followers.length})`}/>}
       {showFollowModal==="following"&&<FollowModal list={following} title={`Takip Edilenler (${following.length})`}/>}
       <div style={{padding:"24px 20px 16px",display:"flex",flexDirection:"column",alignItems:"center",borderBottom:"1px solid rgba(99,102,241,0.15)"}}>
