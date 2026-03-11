@@ -335,11 +335,13 @@ supabase.from("profiles").select("username,avatar_url").in("id",post.likes);
   },[]);
 
   const loadLikers = async () => {
-    const {data:postData,error} = await supabase.from("posts").select("likes").eq("id",post.id).single();
-    alert(JSON.stringify(postData));
-    if (!postData?.likes?.length) return;
+    const {data:postData} = await supabase.from("posts").select("likes").eq("id",post.id).single();
+    if (!postData?.likes?.length) {
+      setLikers([{username:"DEBUG: likes bos", avatar_url:null}]);
+      return;
+    }
     const {data} = await supabase.from("profiles").select("id,username,avatar_url").in("id",postData.likes);
-    if (data) setLikers(data);
+    setLikers(data||[{username:"DEBUG: profil gelmedi", avatar_url:null}]);
   };
   const loadComments = async () => {
     if (!data) return;
