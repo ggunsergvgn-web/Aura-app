@@ -415,7 +415,7 @@ function PostCard({ post, user, onDelete, onUpdate, onProfileClick }) {
       <div style={{padding:"10px 14px",display:"flex",gap:16,borderTop:"1px solid rgba(99,102,241,0.08)",alignItems:"center"}}>
         <button onClick={toggleLike} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:liked?"#EC4899":"rgba(148,163,184,0.45)",fontSize:13,fontFamily:"inherit",padding:0}}>
           <svg width="19" height="19" fill={liked?"#EC4899":"none"} viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-          {likeCount>0&&likeCount}
+          {likeCount>0&&<span onClick={e=>{e.stopPropagation();setShowLikes(true);}} style={{cursor:"pointer",textDecoration:"underline",textDecorationStyle:"dotted"}}>{likeCount}</span>}
         </button>
         <button onClick={toggleComments} style={{background:"none",border:"none",cursor:"pointer",display:"flex",alignItems:"center",gap:5,color:showComments?"#818CF8":"rgba(148,163,184,0.45)",fontSize:13,fontFamily:"inherit",padding:0}}>
           <svg width="19" height="19" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
