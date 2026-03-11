@@ -328,7 +328,7 @@ const [likers, setLikers] = useState([]);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content||"");
   const isOwner = post.user_id===user.id;
-
+supabase.from("profiles").select("username,avatar_url").in("id",post.likes);
   useEffect(()=>{
     supabase.from("saved_posts").select("id").eq("user_id",user.id).eq("post_id",post.id).maybeSingle().then(({data})=>setSaved(!!data));
     supabase.from("comments").select("id",{count:"exact"}).eq("post_id",post.id).then(({count})=>setCommentCount(count||0));
