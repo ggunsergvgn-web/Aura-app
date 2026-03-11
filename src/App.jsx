@@ -653,6 +653,7 @@ function ProfileScreen({ user, profile, onLogout, onUpdateProfile }) {
   const [following, setFollowing] = useState([]);
   const [activeTab, setActiveTab] = useState("posts");
   const [showFollowModal, setShowFollowModal] = useState(null);
+  const [selectedPost, setSelectedPost] = useState(null);
   const avatarRef = useRef();
 
   useEffect(()=>{
