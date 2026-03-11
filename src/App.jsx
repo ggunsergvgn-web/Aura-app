@@ -334,22 +334,15 @@ supabase.from("profiles").select("username,avatar_url").in("id",post.likes);
     {likeCount>0&&<span onClick={e=>{e.stopPropagation();loadLikers();setShowLikes(true);}} style={{cursor:"pointer",textDecoration:"underline",textDecorationStyle:"dotted"}}>{likeCount}</span>}
   },[]);
 
-  const loadComments = async () => {
-    const loadLikers = async () => {
+  const loadLikers = async () => {
     const {data:postData} = await supabase.from("posts").select("likes").eq("id",post.id).single();
     if (!postData||!postData.likes||postData.likes.length===0) return;
     const {data} = await supabase.from("profiles").select("id,username,avatar_url").in("id",postData.likes);
     if (data) setLikers(data);
-    }
-    };
+  };
+  const loadComments = async () => {
     const {data} = await supabase.from("comments").select("*").eq("post_id",post.id).order("created_at");
     if (!data) return;
-    const {data} = await supabase.from("comments").select("*").eq("post_id",post.id).order("created_at");
-    if (!data) return;
-    const withProfiles = await Promise.all(data.map(async c => {
-      const {data:prof} = await supabase.from("profiles").select("username,avatar_url").eq("id",c.user_id).single();
-      return {...c,profiles:prof};
-    }));
     setComments(withProfiles);
     setCommentCount(withProfiles.length);
   };
