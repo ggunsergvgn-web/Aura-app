@@ -376,6 +376,20 @@ supabase.from("profiles").select("username,avatar_url").in("id",post.likes);
   return (
     <div style={{margin:"0 16px 12px",borderRadius:20,background:"rgba(255,255,255,0.025)",border:"1px solid rgba(99,102,241,0.12)",overflow:"hidden",...bgStyle}}>
       <div style={{padding:"12px 14px 8px",display:"flex",alignItems:"center",gap:10}}>
+        {showLikes&&(
+      <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:300,display:"flex",flexDirection:"column",backdropFilter:"blur(12px)"}} onClick={()=>setShowLikes(false)}>
+        <div style={{background:"#0d0d2b",borderRadius:"24px 24px 0 0",marginTop:200,padding:20,maxHeight:"60vh",overflowY:"auto"}} onClick={e=>e.stopPropagation()}>
+          <div style={{color:"#F1F5F9",fontWeight:700,fontSize:16,marginBottom:16}}>❤️ Beğenenler</div>
+          {likers.length===0&&<div style={{color:"rgba(148,163,184,0.4)",textAlign:"center",padding:20}}>Henüz beğenen yok</div>}
+          {likers.map((u,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:12,marginBottom:12}}>
+              <Avatar name={u.username} url={u.avatar_url} size={40}/>
+              <div style={{color:"#F1F5F9",fontWeight:600}}>{u.username}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
         <div onClick={()=>onProfileClick&&onProfileClick(post.profiles)} style={{cursor:"pointer"}}>
           <Avatar name={post.profiles?.username||"?"} url={post.profiles?.avatar_url} size={40}/>
         </div>
