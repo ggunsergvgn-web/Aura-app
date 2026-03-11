@@ -336,10 +336,14 @@ supabase.from("profiles").select("username,avatar_url").in("id",post.likes);
 
   const loadComments = async () => {
     const loadLikers = async () => {
-    if (!post.likes||post.likes.length===0) return;
-    const {data} = await supabase.from("profiles").select("id,username,avatar_url").in("id",post.likes);
+    const {data:postData} = await supabase.from("posts").select("likes").eq("id",post.id).single();
+    if (!postData||!postData.likes||postData.likes.length===0) return;
+    const {data} = await supabase.from("profiles").select("id,username,avatar_url").in("id",postData.likes);
     if (data) setLikers(data);
-  };
+    }
+    };
+    const {data} = await supabase.from("comments").select("*").eq("post_id",post.id).order("created_at");
+    if (!data) return;
     const {data} = await supabase.from("comments").select("*").eq("post_id",post.id).order("created_at");
     if (!data) return;
     const withProfiles = await Promise.all(data.map(async c => {
