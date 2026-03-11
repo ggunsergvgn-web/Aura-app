@@ -335,8 +335,9 @@ supabase.from("profiles").select("username,avatar_url").in("id",post.likes);
   },[]);
 
   const loadLikers = async () => {
-    const {data:postData} = await supabase.from("posts").select("likes").eq("id",post.id).single();
-    if (!postData||!postData.likes||postData.likes.length===0) return;
+    const {data:postData,error} = await supabase.from("posts").select("likes").eq("id",post.id).single();
+    alert(JSON.stringify(postData));
+    if (!postData?.likes?.length) return;
     const {data} = await supabase.from("profiles").select("id,username,avatar_url").in("id",postData.likes);
     if (data) setLikers(data);
   };
