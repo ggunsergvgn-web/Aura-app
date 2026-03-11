@@ -654,6 +654,8 @@ function ProfileScreen({ user, profile, onLogout, onUpdateProfile }) {
   const [activeTab, setActiveTab] = useState("posts");
   const [showFollowModal, setShowFollowModal] = useState(null);
   const [selectedPost, setSelectedPost] = useState(null);
+  const [editingPost, setEditingPost] = useState(null);
+const [editContent, setEditContent] = useState("");
   const avatarRef = useRef();
 
   useEffect(()=>{
@@ -733,13 +735,25 @@ supabase.from("follows").select("*, profiles(id,username,avatar_url,bio)").eq("f
         </button>
         <div style={{color:"#F1F5F9",fontWeight:700}}>Gönderi</div>
         <div style={{marginLeft:"auto",display:"flex",gap:8}}>
-          <button onClick={()=>setSelectedPost(null)} style={{padding:"6px 14px",borderRadius:10,background:"rgba(99,102,241,0.15)",border:"none",color:"#818CF8",cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>✏️ Düzenle</button>
+          <button onClick={()=>{setEditContent(selectedPost.content||"");setEditingPost(selectedPost);}} style={{padding:"6px 14px",borderRadius:10,background:"rgba(99,102,241,0.15)",border:"none",color:"#818CF8",cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>✏️ Düzenle</button>
           <button onClick={async()=>{await supabase.from("posts").delete().eq("id",selectedPost.id);setUserPosts(prev=>prev.filter(p=>p.id!==selectedPost.id));setSelectedPost(null);}} style={{padding:"6px 14px",borderRadius:10,background:"rgba(239,68,68,0.1)",border:"none",color:"#F87171",cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>🗑️ Sil</button>
         </div>
       </div>
       {selectedPost.media_url&&(selectedPost.media_type==="video"?<video src={selectedPost.media_url} style={{width:"100%",maxHeight:400,objectFit:"cover"}} controls/>:<img src={selectedPost.media_url} alt="" style={{width:"100%",maxHeight:400,objectFit:"cover"}}/>)}
       {selectedPost.content&&<div style={{padding:"16px",color:"#CBD5E1",fontSize:15,lineHeight:1.65}}>{selectedPost.content}</div>}
       <div style={{padding:"12px 16px",color:"rgba(129,140,248,0.4)",fontSize:12}}>{new Date(selectedPost.created_at).toLocaleDateString("tr-TR",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})}</div>
+    </div>
+  </div>
+)}
+      {editingPost&&(
+  <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.9)",zIndex:400,display:"flex",flexDirection:"column",backdropFilter:"blur(12px)"}}>
+    <div style={{background:"#0d0d2b",borderRadius:"24px 24px 0 0",marginTop:100,padding:20}}>
+      <div style={{color:"#F1F5F9",fontWeight:700,fontSize:16,marginBottom:12}}>Gönderiyi Düzenle</div>
+      <textarea value={editContent} onChange={e=>setEditContent(e.target.value)} rows={4} style={{width:"100%",background:"rgba(99,102,241,0.08)",border:"1px solid rgba(99,102,241,0.3)",borderRadius:12,padding:"12px 14px",color:"#F1F5F9",fontSize:14,fontFamily:"inherit",outline:"none",resize:"none",boxSizing:"border-box"}}/>
+      <div style={{display:"flex",gap:8,marginTop:12}}>
+        <button onClick={async()=>{await supabase.from("posts").update({content:editContent}).eq("id",editingPost.id);setUserPosts(prev=>prev.map(p=>p.id===editingPost.id?{...p,content:editContent}:p));setEditingPost(null);setSelectedPost(null);}} style={{flex:1,padding:"10px",borderRadius:12,background:"linear-gradient(135deg,#6366F1,#EC4899)",border:"none",color:"#fff",fontWeight:700,cursor:"pointer",fontFamily:"inherit"}}>Kaydet</button>
+        <button onClick={()=>setEditingPost(null)} style={{flex:1,padding:"10px",borderRadius:12,background:"rgba(255,255,255,0.06)",border:"none",color:"#F1F5F9",cursor:"pointer",fontFamily:"inherit"}}>İptal</button>
+      </div>
     </div>
   </div>
 )}
