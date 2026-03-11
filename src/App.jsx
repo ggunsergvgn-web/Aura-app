@@ -331,7 +331,7 @@ const [likers, setLikers] = useState([]);
 supabase.from("profiles").select("username,avatar_url").in("id",post.likes);
   useEffect(()=>{
     supabase.from("saved_posts").select("id").eq("user_id",user.id).eq("post_id",post.id).maybeSingle().then(({data})=>setSaved(!!data));
-    {likeCount>0&&<span onClick={e=>{e.stopPropagation();setLikers([]);loadLikers();setShowLikes(true);}} style={{cursor:"pointer",textDecoration:"underline",textDecorationStyle:"dotted"}}>{likeCount}</span>}
+  {likeCount>0&&<span onClick={async e=>{e.stopPropagation();setLikers([]);await loadLikers();setShowLikes(true);}} style={{cursor:"pointer",textDecoration:"underline",textDecorationStyle:"dotted"}}>{likeCount}</span>}
   },[]);
 
   const loadLikers = async () => {
