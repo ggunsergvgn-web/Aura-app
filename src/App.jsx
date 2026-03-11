@@ -323,6 +323,8 @@ function PostCard({ post, user, onDelete, onUpdate, onProfileClick }) {
   const [commentCount, setCommentCount] = useState(0);
   const [commentInput, setCommentInput] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showLikes, setShowLikes] = useState(false);
+const [likers, setLikers] = useState([]);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState(post.content||"");
   const isOwner = post.user_id===user.id;
