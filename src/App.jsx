@@ -794,7 +794,7 @@ supabase.from("follows").select("*, profiles(id,username,avatar_url,bio)").eq("f
       </div>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:2,padding:2}}>
         {displayPosts.map(post=>(
-          <div key={post.id} style={{aspectRatio:"1",overflow:"hidden"}}>
+          <div key={post.id} style={{aspectRatio:"1",overflow:"hidden",position:"relative",cursor:"pointer"}} onClick={()=>setSelectedPost(post)}>
             {post.media_type==="video"?<video src={post.media_url} style={{width:"100%",height:"100%",objectFit:"cover"}}/>:<img src={post.media_url} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/>}
           </div>
         ))}
