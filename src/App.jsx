@@ -337,7 +337,7 @@ supabase.from("profiles").select("username,avatar_url").in("id",post.likes);
   const loadLikers = async () => {
     const {data:postData} = await supabase.from("posts").select("likes").eq("id",post.id).single();
     if (!postData?.likes?.length) {
-      setLikers([{username:"DEBUG: likes bos", avatar_url:null}]);
+      setLikers([{username:"BOS: "+JSON.stringif
       return;
     }
     const {data} = await supabase.from("profiles").select("id,username,avatar_url").in("id",postData.likes);
