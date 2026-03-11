@@ -116,7 +116,7 @@ function UserProfileModal({ targetUser, currentUser, onClose }) {
       setFollowers(prev=>prev.filter(f=>f.follower_id!==currentUser.id));
     } else {
       await supabase.from("follows").insert({follower_id:currentUser.id,following_id:targetUser.id});
-      setIsFollowing(true);
+      setIsFollowing(true); 
       setFollowers(prev=>[...prev,{follower_id:currentUser.id}]);
     }
   };
