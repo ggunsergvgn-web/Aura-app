@@ -341,8 +341,11 @@ supabase.from("profiles").select("username,avatar_url").in("id",post.likes);
     if (data) setLikers(data);
   };
   const loadComments = async () => {
-    const {data} = await supabase.from("comments").select("*").eq("post_id",post.id).order("created_at");
     if (!data) return;
+    const withProfiles = await Promise.all(data.map(async c => {
+      const {data:prof} = await supabase.from("profiles").select("username,avatar_url").eq("id",c.user_id).single();
+      return {...c, profiles: prof};
+    }));
     setComments(withProfiles);
     setCommentCount(withProfiles.length);
   };
