@@ -6,7 +6,7 @@ const supabase = createClient(
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhlYmxqZHZ1Y2Fuc3N6eGh2bmZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwOTQ1MTQsImV4cCI6MjA4ODY3MDUxNH0.nS3J8Z7bNano_z7jdFmIhtmYrOc6HC2FpmBPrtcPZhI"
 );
 
-const LOGO = "https://hebljdvucansszxhvnfp.supabase.co/storage/v1/object/public/post-media/image-4.jpg";
+const LOGO = "https://hebljdvucansszxhvnfp.supabase.co/storage/v1/object/public/post-media/Picsart_26-03-11_18-37-28-244.png";
 const COLORS = ["#3B82F6","#6366F1","#8B5CF6","#EC4899","#14B8A6","#F59E0B"];
 const MOODS = ["😊","😢","😍","😡","😂","🔥","💯","🎉"];
 const BG_COLORS = ["transparent","#1a0533","#0a1628","#0d2818","#2d1b00","#1a0a0a","#0a0a2d","#1a1a0a"];
