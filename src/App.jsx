@@ -293,7 +293,7 @@ function PostCard({post, user, onDelete, onUpdate}) {
       )}
     </div>
   );
-          }
+}
 function FeedScreen({user, profile}) {
   const [posts,setPosts] = useState([]);
   const [loading,setLoading] = useState(true);
@@ -584,7 +584,8 @@ function ExploreScreen({user, allProfiles}) {
       )}
     </div>
   );
-  function ProfileScreen({user, profile, onLogout, onUpdateProfile}) {
+}
+function ProfileScreen({user, profile, onLogout, onUpdateProfile}) {
   const [posts,setPosts] = useState([]);
   const [savedPosts,setSavedPosts] = useState([]);
   const [followers,setFollowers] = useState([]);
@@ -722,8 +723,8 @@ function ExploreScreen({user, allProfiles}) {
       )}
     </div>
   );
-  }
-  function MessagesScreen({user, profile, allProfiles}) {
+}
+function MessagesScreen({user, profile, allProfiles}) {
   const [search,setSearch] = useState("");
   const [selectedUser,setSelectedUser] = useState(null);
   const [messages,setMessages] = useState([]);
@@ -940,7 +941,7 @@ function ExploreScreen({user, allProfiles}) {
     </div>
   );
 }
-  export default function App() {
+export default function App() {
   const [user,setUser] = useState(null);
   const [profile,setProfile] = useState(null);
   const [allProfiles,setAllProfiles] = useState([]);
@@ -1058,4 +1059,4 @@ function ExploreScreen({user, allProfiles}) {
       </div>
     </>
   );
-}                                                                      }
+}
