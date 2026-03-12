@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -12,6 +12,26 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
+
+  // Sayfa yüklendiğinde oturum kontrolü
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        loadProfile(session.user.id);
+      }
+    });
+  }, []);
+
+  async function loadProfile(userId) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .single();
+    setProfile(data);
+  }
 
   async function handleLogin() {
     setLoading(true);
@@ -23,7 +43,7 @@ function App() {
     if (error) setMessage("Hata: " + error.message);
     else {
       setUser(data.user);
-      setMessage("✅ Giriş başarılı!");
+      await loadProfile(data.user.id);
     }
     setLoading(false);
   }
@@ -36,22 +56,35 @@ function App() {
       password: password,
     });
     if (error) setMessage("Hata: " + error.message);
-    else setMessage("✅ Kayıt başarılı! E-postanı kontrol et.");
+    else {
+      setMessage("✅ Kayıt başarılı! Giriş yapabilirsin.");
+    }
     setLoading(false);
   }
 
   async function handleLogout() {
     await supabase.auth.signOut();
     setUser(null);
+    setProfile(null);
     setMessage("Çıkış yapıldı");
   }
 
-  // Kullanıcı giriş yapmışsa hoşgeldin mesajı göster
+  // Kullanıcı giriş yapmışsa profil bilgilerini göster
   if (user) {
     return (
       <div style={{ padding: "20px", fontFamily: "Arial", maxWidth: "400px", margin: "auto" }}>
         <h1>Hoşgeldin! 👋</h1>
-        <p>Email: {user.email}</p>
+        <div style={{ 
+          background: "#f5f5f5", 
+          padding: "20px", 
+          borderRadius: "10px",
+          marginTop: "20px"
+        }}>
+          <p><strong>Email:</strong> {user.email}</p>
+          <p><strong>Kullanıcı adı:</strong> {profile?.username || "Henüz ayarlanmamış"}</p>
+          <p><strong>Hakkında:</strong> {profile?.bio || "Henüz eklenmemiş"}</p>
+          <p><strong>Üyelik:</strong> {new Date(user.created_at).toLocaleDateString("tr-TR")}</p>
+        </div>
         <button 
           onClick={handleLogout}
           style={{
@@ -61,7 +94,8 @@ function App() {
             padding: "10px 20px",
             borderRadius: "5px",
             cursor: "pointer",
-            marginTop: "20px"
+            marginTop: "20px",
+            width: "100%"
           }}
         >
           Çıkış Yap
@@ -70,7 +104,7 @@ function App() {
     );
   }
 
-  // Giriş yapılmamışsa giriş ekranı göster
+  // Giriş yapılmamışsa giriş ekranı
   return (
     <div style={{ padding: "20px", fontFamily: "Arial", maxWidth: "400px", margin: "auto" }}>
       <h1 style={{ textAlign: "center", marginBottom: "30px" }}>AURA'ya Giriş</h1>
