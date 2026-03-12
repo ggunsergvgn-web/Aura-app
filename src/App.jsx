@@ -630,8 +630,9 @@ function ProfileScreen({user, profile, onLogout, onUpdateProfile}) {
     const{error}=await supabase.storage.from("post-media").upload(path,f,{upsert:true});
     if(error){setUploadingAvatar(false);return;}
     const{data}=supabase.storage.from("post-media").getPublicUrl(path);
-    await supabase.from("profiles").update({avatar_url:data.publicUrl}).eq("id",user.id);
-    onUpdateProfile({...profile,avatar_url:data.publicUrl});
+    const newUrl=data.publicUrl+"?t="+Date.now();
+    await supabase.from("profiles").update({avatar_url:newUrl}).eq("id",user.id);
+    onUpdateProfile({...profile,avatar_url:newUrl});
     setUploadingAvatar(false);
   };
 
