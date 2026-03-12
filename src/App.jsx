@@ -613,16 +613,19 @@ function ProfileScreen({user, profile, onLogout, onUpdateProfile}) {
       if(s)setSavedPosts(s.map(x=>x.posts).filter(Boolean));
     });
   },[user]);
-
   const saveProfile=async()=>{
     if(!newUsername.trim())return;setSaving(true);setError("");
     const{data:ex}=await supabase.from("profiles").select("id").eq("username",newUsername.trim()).neq("id",user.id).maybeSingle();
     if(ex){setError("Bu kullanıcı adı alınmış!");setSaving(false);return;}
-    await supabase.from("profiles").update({username:newUsername.trim(),bio:newBio.trim()}).eq("id",user.id);
-    onUpdateProfile({...profile,username:newUsername.trim(),bio:newBio.trim()});
+    const{error}=await supabase.from("profiles").update({username:newUsername.trim(),bio:newBio.trim()}).eq("id",user.id);
+    if(error){setError("Kaydetme hatası!");setSaving(false);return;}
+    const updated={...profile,username:newUsername.trim(),bio:newBio.trim()};
+    onUpdateProfile(updated);
+    setNewUsername(newUsername.trim());
+    setNewBio(newBio.trim());
     setEditing(false);setSaving(false);
   };
-
+  
   const uploadAvatar=async e=>{
     const f=e.target.files[0];if(!f)return;setUploadingAvatar(true);
     const ext=f.name.split(".").pop();
