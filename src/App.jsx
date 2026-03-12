@@ -939,9 +939,8 @@ function ExploreScreen({user, allProfiles}) {
       </div>
     </div>
   );
-
-
-export default function App() {
+  }
+  export default function App() {
   const [user,setUser] = useState(null);
   const [profile,setProfile] = useState(null);
   const [allProfiles,setAllProfiles] = useState([]);
