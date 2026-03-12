@@ -13,8 +13,10 @@ function App() {
   const [message, setMessage] = useState("");
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [editing, setEditing] = useState(false);
+  const [username, setUsername] = useState("");
+  const [bio, setBio] = useState("");
 
-  // Sayfa yüklendiğinde oturum kontrolü
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -31,6 +33,24 @@ function App() {
       .eq("id", userId)
       .single();
     setProfile(data);
+    setUsername(data?.username || "");
+    setBio(data?.bio || "");
+  }
+
+  async function updateProfile() {
+    setLoading(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ username: username, bio: bio })
+      .eq("id", user.id);
+    
+    if (error) setMessage("Hata: " + error.message);
+    else {
+      setMessage("✅ Profil güncellendi!");
+      loadProfile(user.id);
+      setEditing(false);
+    }
+    setLoading(false);
   }
 
   async function handleLogin() {
@@ -66,11 +86,99 @@ function App() {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
+    setEditing(false);
     setMessage("Çıkış yapıldı");
   }
 
-  // Kullanıcı giriş yapmışsa profil bilgilerini göster
   if (user) {
+    if (editing) {
+      // Düzenleme modu
+      return (
+        <div style={{ padding: "20px", fontFamily: "Arial", maxWidth: "400px", margin: "auto" }}>
+          <h1>Profili Düzenle ✏️</h1>
+          
+          <div style={{ marginTop: "20px" }}>
+            <label style={{ display: "block", marginBottom: "5px" }}>Kullanıcı Adı:</label>
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "5px",
+                border: "1px solid #ddd",
+                fontSize: "16px",
+                marginBottom: "15px"
+              }}
+            />
+
+            <label style={{ display: "block", marginBottom: "5px" }}>Hakkında:</label>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              rows="4"
+              style={{
+                width: "100%",
+                padding: "10px",
+                borderRadius: "5px",
+                border: "1px solid #ddd",
+                fontSize: "16px",
+                marginBottom: "20px",
+                resize: "vertical"
+              }}
+            />
+
+            {message && (
+              <div style={{ 
+                padding: "10px", 
+                marginBottom: "20px", 
+                background: message.includes("✅") ? "#e8f5e9" : "#ffebee",
+                borderRadius: "5px",
+                color: message.includes("✅") ? "#2e7d32" : "#c62828"
+              }}>
+                {message}
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={updateProfile}
+                disabled={loading}
+                style={{
+                  flex: 1,
+                  background: "#4caf50",
+                  color: "white",
+                  border: "none",
+                  padding: "12px",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                  fontSize: "16px"
+                }}
+              >
+                Kaydet
+              </button>
+              <button
+                onClick={() => setEditing(false)}
+                style={{
+                  flex: 1,
+                  background: "#9e9e9e",
+                  color: "white",
+                  border: "none",
+                  padding: "12px",
+                  borderRadius: "5px",
+                  cursor: "pointer",
+                  fontSize: "16px"
+                }}
+              >
+                İptal
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Profil görüntüleme modu
     return (
       <div style={{ padding: "20px", fontFamily: "Arial", maxWidth: "400px", margin: "auto" }}>
         <h1>Hoşgeldin! 👋</h1>
@@ -84,7 +192,25 @@ function App() {
           <p><strong>Kullanıcı adı:</strong> {profile?.username || "Henüz ayarlanmamış"}</p>
           <p><strong>Hakkında:</strong> {profile?.bio || "Henüz eklenmemiş"}</p>
           <p><strong>Üyelik:</strong> {new Date(user.created_at).toLocaleDateString("tr-TR")}</p>
+          
+          <button
+            onClick={() => setEditing(true)}
+            style={{
+              background: "#2196f3",
+              color: "white",
+              border: "none",
+              padding: "10px",
+              borderRadius: "5px",
+              cursor: "pointer",
+              width: "100%",
+              marginTop: "15px",
+              fontSize: "16px"
+            }}
+          >
+            Profili Düzenle
+          </button>
         </div>
+        
         <button 
           onClick={handleLogout}
           style={{
@@ -104,7 +230,7 @@ function App() {
     );
   }
 
-  // Giriş yapılmamışsa giriş ekranı
+  // Giriş ekranı
   return (
     <div style={{ padding: "20px", fontFamily: "Arial", maxWidth: "400px", margin: "auto" }}>
       <h1 style={{ textAlign: "center", marginBottom: "30px" }}>AURA'ya Giriş</h1>
