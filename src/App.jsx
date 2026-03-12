@@ -55,13 +55,14 @@ function App() {
     if (error) {
       setMessage("Hata: " + error.message);
     } else {
-      // Yeni profili hemen yükle
+      // Yeni profili hemen çek
       const { data } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", user.id)
         .single();
       
+      // Tüm state'leri güncelle
       setProfile(data);
       setUsername(data.username || "");
       setBio(data.bio || "");
@@ -189,8 +190,8 @@ function App() {
               </button>
               <button
                 onClick={() => {
-                  setUsername(profile.username || "");
-                  setBio(profile.bio || "");
+                  setUsername(profile?.username || "");
+                  setBio(profile?.bio || "");
                   setEditing(false);
                   setMessage("");
                 }}
@@ -224,7 +225,7 @@ function App() {
           marginTop: "20px"
         }}>
           <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Kullanıcı adı:</strong> {profile?.username || "Ayarlanmamış"}</p>
+          <p><strong>Kullanıcı adı:</strong> {profile?.username || "Henüz ayarlanmamış"}</p>
           <p><strong>Hakkında:</strong> {profile?.bio || "Henüz eklenmemiş"}</p>
           <p><strong>Üyelik:</strong> {new Date(user.created_at).toLocaleDateString("tr-TR")}</p>
           
