@@ -939,7 +939,7 @@ function ExploreScreen({user, allProfiles}) {
       </div>
     </div>
   );
-                         }
+}
 
 export default function App() {
   const [user,setUser] = useState(null);
