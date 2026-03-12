@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -7,28 +7,154 @@ const supabase = createClient(
 );
 
 function App() {
-  const [baglantiDurumu, setBaglantiDurumu] = useState("Bağlantı kontrol ediliyor...");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [user, setUser] = useState(null);
 
-  useEffect(() => {
-    async function testBaglanti() {
-      try {
-        const { error } = await supabase.from("test").select("*").limit(1);
-        if (error && error.message.includes("relation")) {
-          setBaglantiDurumu("✅ Supabase bağlantısı başarılı! (Tablo henüz yok)");
-        } else {
-          setBaglantiDurumu("✅ Supabase bağlantısı başarılı!");
-        }
-      } catch (hata) {
-        setBaglantiDurumu("❌ Bağlantı hatası: " + hata.message);
-      }
+  async function handleLogin() {
+    setLoading(true);
+    setMessage("");
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    });
+    if (error) setMessage("Hata: " + error.message);
+    else {
+      setUser(data.user);
+      setMessage("✅ Giriş başarılı!");
     }
-    testBaglanti();
-  }, []);
+    setLoading(false);
+  }
 
+  async function handleSignUp() {
+    setLoading(true);
+    setMessage("");
+    const { data, error } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+    });
+    if (error) setMessage("Hata: " + error.message);
+    else setMessage("✅ Kayıt başarılı! E-postanı kontrol et.");
+    setLoading(false);
+  }
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    setUser(null);
+    setMessage("Çıkış yapıldı");
+  }
+
+  // Kullanıcı giriş yapmışsa hoşgeldin mesajı göster
+  if (user) {
+    return (
+      <div style={{ padding: "20px", fontFamily: "Arial", maxWidth: "400px", margin: "auto" }}>
+        <h1>Hoşgeldin! 👋</h1>
+        <p>Email: {user.email}</p>
+        <button 
+          onClick={handleLogout}
+          style={{
+            background: "#ff4444",
+            color: "white",
+            border: "none",
+            padding: "10px 20px",
+            borderRadius: "5px",
+            cursor: "pointer",
+            marginTop: "20px"
+          }}
+        >
+          Çıkış Yap
+        </button>
+      </div>
+    );
+  }
+
+  // Giriş yapılmamışsa giriş ekranı göster
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial" }}>
-      <h1>AURA Uygulaması</h1>
-      <h2>{baglantiDurumu}</h2>
+    <div style={{ padding: "20px", fontFamily: "Arial", maxWidth: "400px", margin: "auto" }}>
+      <h1 style={{ textAlign: "center", marginBottom: "30px" }}>AURA'ya Giriş</h1>
+      
+      <div style={{ marginBottom: "15px" }}>
+        <label style={{ display: "block", marginBottom: "5px" }}>Email:</label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "10px",
+            borderRadius: "5px",
+            border: "1px solid #ddd",
+            fontSize: "16px"
+          }}
+        />
+      </div>
+
+      <div style={{ marginBottom: "20px" }}>
+        <label style={{ display: "block", marginBottom: "5px" }}>Şifre:</label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "10px",
+            borderRadius: "5px",
+            border: "1px solid #ddd",
+            fontSize: "16px"
+          }}
+        />
+      </div>
+
+      {message && (
+        <div style={{ 
+          padding: "10px", 
+          marginBottom: "20px", 
+          background: message.includes("✅") ? "#e8f5e9" : "#ffebee",
+          borderRadius: "5px",
+          color: message.includes("✅") ? "#2e7d32" : "#c62828"
+        }}>
+          {message}
+        </div>
+      )}
+
+      <div style={{ display: "flex", gap: "10px" }}>
+        <button
+          onClick={handleLogin}
+          disabled={loading}
+          style={{
+            flex: 1,
+            background: "#2196f3",
+            color: "white",
+            border: "none",
+            padding: "12px",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontSize: "16px",
+            opacity: loading ? 0.7 : 1
+          }}
+        >
+          Giriş Yap
+        </button>
+        <button
+          onClick={handleSignUp}
+          disabled={loading}
+          style={{
+            flex: 1,
+            background: "#4caf50",
+            color: "white",
+            border: "none",
+            padding: "12px",
+            borderRadius: "5px",
+            cursor: "pointer",
+            fontSize: "16px",
+            opacity: loading ? 0.7 : 1
+          }}
+        >
+          Kayıt Ol
+        </button>
+      </div>
     </div>
   );
 }
