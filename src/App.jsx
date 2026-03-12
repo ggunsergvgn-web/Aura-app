@@ -54,21 +54,23 @@ function App() {
 
     if (error) {
       setMessage("Hata: " + error.message);
-    } else {
-      // Yeni profili hemen çek
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", user.id)
-        .single();
-      
-      // Tüm state'leri güncelle
-      setProfile(data);
-      setUsername(data.username || "");
-      setBio(data.bio || "");
-      setMessage("✅ Profil güncellendi!");
-      setEditing(false);
+      setLoading(false);
+      return;
     }
+
+    // Yeni profili hemen çek
+    const { data } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .single();
+    
+    // Tüm state'leri güncelle
+    setProfile(data);
+    setUsername(data.username || "");
+    setBio(data.bio || "");
+    setMessage("✅ Profil güncellendi!");
+    setEditing(false);
     setLoading(false);
   }
 
@@ -83,13 +85,14 @@ function App() {
 
     if (error) {
       setMessage("Hata: " + error.message);
+      setLoading(false);
     } else {
       setUser(data.user);
       await loadProfile(data.user.id);
       setEmail("");
       setPassword("");
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   async function handleSignUp() {
