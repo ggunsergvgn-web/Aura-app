@@ -939,15 +939,15 @@ function ExploreScreen({user, allProfiles}) {
       </div>
     </div>
   );
-    }
-  export default function App() {
+}
+
+export default function App() {
   const [user,setUser] = useState(null);
   const [profile,setProfile] = useState(null);
   const [allProfiles,setAllProfiles] = useState([]);
   const [loading,setLoading] = useState(true);
   const [activeTab,setActiveTab] = useState("feed");
   const [unreadMessages,setUnreadMessages] = useState(0);
-
   useEffect(()=>{
     supabase.auth.getSession().then(({data:{session}})=>{
       if(session?.user){setUser(session.user);loadProfile(session.user.id);}
