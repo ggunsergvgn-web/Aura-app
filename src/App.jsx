@@ -973,13 +973,13 @@ export default function App() {
     return()=>supabase.removeChannel(ch);
   },[user,activeTab]);
 
-  const loadProfile=async(userId)=>{
+const loadProfile=async(userId)=>{
     try{
       const[{data:prof},{data:all}]=await Promise.all([
         supabase.from("profiles").select("*").eq("id",userId).single(),
         supabase.from("profiles").select("*")
       ]);
-      setProfile(prof);if(all)setAllProfiles(all);
+      if(prof){setProfile(prof);setAllProfiles(all||[]);}
     }finally{setLoading(false);}
   };
 
