@@ -310,17 +310,36 @@ function FeedScreen({user, profile}) {
   const [showBgs,setShowBgs] = useState(false);
   const fileRef = useRef();
 
-  const loadPosts = useCallback(async()=>{
-    const{data}=await supabase.from("posts").select("*").order("created_at",{ascending:false}).limit(40);
-    if(!data){setLoading(false);return;}
-    const withP=await Promise.all(data.map(async p=>{
-      const{data:prof}=await supabase.from("profiles").select("username,avatar_url").eq("id",p.user_id).single();
-      return{...p,profiles:prof};
-    }));
-    const pinned=withP.filter(p=>p.pinned&&p.user_id===user.id);
-    const rest=withP.filter(p=>!(p.pinned&&p.user_id===user.id));
-    setPosts([...pinned,...rest]);
-    setLoading(false);
+  const loadPosts = useCallback(async() => {
+    try {
+      const { data, error } = await supabase
+        .from("posts")
+        .select(`
+          *,
+          profiles:user_id (
+            username,
+            avatar_url
+          )
+        `)
+        .order("created_at", { ascending: false })
+        .limit(40);
+      
+      if (error) throw error;
+      if (!data) { setLoading(false); return; }
+      
+      const formattedPosts = data.map(post => ({
+        ...post,
+        profiles: post.profiles || { username: "Silinmiş Kullanıcı" }
+      }));
+      
+      const pinned = formattedPosts.filter(p => p.pinned && p.user_id === user.id);
+      const rest = formattedPosts.filter(p => !(p.pinned && p.user_id === user.id));
+      setPosts([...pinned, ...rest]);
+    } catch (error) {
+      console.error("Gönderiler yüklenirken hata:", error);
+    } finally {
+      setLoading(false);
+    }
   },[user]);
 
   useEffect(()=>{
