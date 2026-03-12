@@ -1014,7 +1014,7 @@ function MessagesScreen({ user, profile, allProfiles, accent }) {
     </div>
   );
 }
-
+}
 export default function App() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(() => lsGet("aura_profile"));
