@@ -55,8 +55,17 @@ function App() {
     if (error) {
       setMessage("Hata: " + error.message);
     } else {
+      // Yeni profili hemen yükle
+      const { data } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      
+      setProfile(data);
+      setUsername(data.username || "");
+      setBio(data.bio || "");
       setMessage("✅ Profil güncellendi!");
-      await loadProfile(user.id);
       setEditing(false);
     }
     setLoading(false);
@@ -179,7 +188,12 @@ function App() {
                 {loading ? "Kaydediliyor..." : "Kaydet"}
               </button>
               <button
-                onClick={() => setEditing(false)}
+                onClick={() => {
+                  setUsername(profile.username || "");
+                  setBio(profile.bio || "");
+                  setEditing(false);
+                  setMessage("");
+                }}
                 style={{
                   flex: 1,
                   background: "#9e9e9e",
