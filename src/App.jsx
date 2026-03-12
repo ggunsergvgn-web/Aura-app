@@ -32,22 +32,31 @@ function App() {
       .select("*")
       .eq("id", userId)
       .single();
-    setProfile(data);
-    setUsername(data?.username || "");
-    setBio(data?.bio || "");
+    
+    if (data) {
+      setProfile(data);
+      setUsername(data.username || "");
+      setBio(data.bio || "");
+    }
   }
 
   async function updateProfile() {
     setLoading(true);
+    setMessage("");
+
     const { error } = await supabase
       .from("profiles")
-      .update({ username: username, bio: bio })
+      .update({ 
+        username: username, 
+        bio: bio 
+      })
       .eq("id", user.id);
-    
-    if (error) setMessage("Hata: " + error.message);
-    else {
+
+    if (error) {
+      setMessage("Hata: " + error.message);
+    } else {
       setMessage("✅ Profil güncellendi!");
-      loadProfile(user.id);
+      await loadProfile(user.id);
       setEditing(false);
     }
     setLoading(false);
@@ -56,14 +65,19 @@ function App() {
   async function handleLogin() {
     setLoading(true);
     setMessage("");
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
-    if (error) setMessage("Hata: " + error.message);
-    else {
+
+    if (error) {
+      setMessage("Hata: " + error.message);
+    } else {
       setUser(data.user);
       await loadProfile(data.user.id);
+      setEmail("");
+      setPassword("");
     }
     setLoading(false);
   }
@@ -71,13 +85,18 @@ function App() {
   async function handleSignUp() {
     setLoading(true);
     setMessage("");
+
     const { data, error } = await supabase.auth.signUp({
       email: email,
       password: password,
     });
-    if (error) setMessage("Hata: " + error.message);
-    else {
-      setMessage("✅ Kayıt başarılı! Giriş yapabilirsin.");
+
+    if (error) {
+      setMessage("Hata: " + error.message);
+    } else {
+      setMessage("✅ Kayıt başarılı! Şimdi giriş yapabilirsin.");
+      setEmail("");
+      setPassword("");
     }
     setLoading(false);
   }
@@ -92,41 +111,42 @@ function App() {
 
   if (user) {
     if (editing) {
-      // Düzenleme modu
       return (
         <div style={{ padding: "20px", fontFamily: "Arial", maxWidth: "400px", margin: "auto" }}>
           <h1>Profili Düzenle ✏️</h1>
           
           <div style={{ marginTop: "20px" }}>
-            <label style={{ display: "block", marginBottom: "5px" }}>Kullanıcı Adı:</label>
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "10px",
-                borderRadius: "5px",
-                border: "1px solid #ddd",
-                fontSize: "16px",
-                marginBottom: "15px"
-              }}
-            />
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Kullanıcı Adı:</label>
+              <input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: "5px",
+                  border: "1px solid #ddd",
+                  fontSize: "16px"
+                }}
+              />
+            </div>
 
-            <label style={{ display: "block", marginBottom: "5px" }}>Hakkında:</label>
-            <textarea
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              rows="4"
-              style={{
-                width: "100%",
-                padding: "10px",
-                borderRadius: "5px",
-                border: "1px solid #ddd",
-                fontSize: "16px",
-                marginBottom: "20px",
-                resize: "vertical"
-              }}
-            />
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Hakkında:</label>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                rows="4"
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  borderRadius: "5px",
+                  border: "1px solid #ddd",
+                  fontSize: "16px",
+                  resize: "vertical"
+                }}
+              />
+            </div>
 
             {message && (
               <div style={{ 
@@ -152,10 +172,11 @@ function App() {
                   padding: "12px",
                   borderRadius: "5px",
                   cursor: "pointer",
-                  fontSize: "16px"
+                  fontSize: "16px",
+                  opacity: loading ? 0.7 : 1
                 }}
               >
-                Kaydet
+                {loading ? "Kaydediliyor..." : "Kaydet"}
               </button>
               <button
                 onClick={() => setEditing(false)}
@@ -178,10 +199,10 @@ function App() {
       );
     }
 
-    // Profil görüntüleme modu
     return (
       <div style={{ padding: "20px", fontFamily: "Arial", maxWidth: "400px", margin: "auto" }}>
         <h1>Hoşgeldin! 👋</h1>
+        
         <div style={{ 
           background: "#f5f5f5", 
           padding: "20px", 
@@ -189,12 +210,16 @@ function App() {
           marginTop: "20px"
         }}>
           <p><strong>Email:</strong> {user.email}</p>
-          <p><strong>Kullanıcı adı:</strong> {profile?.username || "Henüz ayarlanmamış"}</p>
+          <p><strong>Kullanıcı adı:</strong> {profile?.username || "Ayarlanmamış"}</p>
           <p><strong>Hakkında:</strong> {profile?.bio || "Henüz eklenmemiş"}</p>
           <p><strong>Üyelik:</strong> {new Date(user.created_at).toLocaleDateString("tr-TR")}</p>
           
           <button
-            onClick={() => setEditing(true)}
+            onClick={() => {
+              setUsername(profile?.username || "");
+              setBio(profile?.bio || "");
+              setEditing(true);
+            }}
             style={{
               background: "#2196f3",
               color: "white",
@@ -221,7 +246,8 @@ function App() {
             borderRadius: "5px",
             cursor: "pointer",
             marginTop: "20px",
-            width: "100%"
+            width: "100%",
+            fontSize: "16px"
           }}
         >
           Çıkış Yap
@@ -230,13 +256,12 @@ function App() {
     );
   }
 
-  // Giriş ekranı
   return (
     <div style={{ padding: "20px", fontFamily: "Arial", maxWidth: "400px", margin: "auto" }}>
       <h1 style={{ textAlign: "center", marginBottom: "30px" }}>AURA'ya Giriş</h1>
       
       <div style={{ marginBottom: "15px" }}>
-        <label style={{ display: "block", marginBottom: "5px" }}>Email:</label>
+        <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Email:</label>
         <input
           type="email"
           value={email}
@@ -252,7 +277,7 @@ function App() {
       </div>
 
       <div style={{ marginBottom: "20px" }}>
-        <label style={{ display: "block", marginBottom: "5px" }}>Şifre:</label>
+        <label style={{ display: "block", marginBottom: "5px", fontWeight: "bold" }}>Şifre:</label>
         <input
           type="password"
           value={password}
@@ -295,7 +320,7 @@ function App() {
             opacity: loading ? 0.7 : 1
           }}
         >
-          Giriş Yap
+          {loading ? "İşlem..." : "Giriş Yap"}
         </button>
         <button
           onClick={handleSignUp}
@@ -312,7 +337,7 @@ function App() {
             opacity: loading ? 0.7 : 1
           }}
         >
-          Kayıt Ol
+          {loading ? "İşlem..." : "Kayıt Ol"}
         </button>
       </div>
     </div>
